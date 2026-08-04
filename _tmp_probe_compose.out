@@ -1,0 +1,122 @@
+=== all containers ===
+WeKnora-frontend	wechatopenai/weknora-ui:latest	Up 2 months
+WeKnora-app	wechatopenai/weknora-app:latest	Up 2 months (healthy)
+WeKnora-postgres	paradedb/paradedb:v0.22.2-pg17	Up 2 months (healthy)
+WeKnora-redis	redis:7.0-alpine	Up 2 months
+WeKnora-docreader	wechatopenai/weknora-docreader:latest	Up 2 months (healthy)
+
+=== compose top (env/project name) ===
+services:
+  frontend:
+    image: wechatopenai/weknora-ui:${WEKNORA_VERSION:-latest}
+    build:
+      context: ./frontend
+      args:
+        - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB:-50}
+    container_name: WeKnora-frontend
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    environment:
+      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB:-50}
+      - APP_HOST=${APP_HOST:-app}
+      # APP_BACKEND_PORT: the port NGINX proxies to (default 8080).
+      # For local deployment this is the App container's listening port, independent of host-mapped APP_PORT.
+      # For remote deployment, set this to the remote App's service port.
+      - APP_PORT=${APP_BACKEND_PORT:-8080}
+      - APP_SCHEME=${APP_SCHEME:-http}
+    # NOTE: If using a remote App backend, comment out or remove the depends_on
+    # block below and set APP_HOST/APP_BACKEND_PORT/APP_SCHEME in your .env file.
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - WeKnora-network
+    restart: unless-stopped
+
+  app:
+    image: wechatopenai/weknora-app:${WEKNORA_VERSION:-latest}
+    build:
+
+=== .env (project name / compose_project_name) ===
+# LANGFUSE_INIT_PROJECT_NAME=WeKnora
+# LANGFUSE_INIT_PROJECT_PUBLIC_KEY=pk-lf-weknora-init
+# LANGFUSE_INIT_PROJECT_SECRET_KEY=sk-lf-weknora-init
+--- env file list ---
+-rw-r--r--  1 root root  16679 May 25 21:00 docker-compose.dev.yml
+-rw-r--r--  1 root root  30733 May 25 21:23 docker-compose.yml
+-rw-r--r--  1 root root  21607 May 25 21:02 .env
+-rw-r--r--  1 root root  21607 May 25 21:00 .env.example
+-rw-r--r--  1 root root   2769 May 25 21:00 .env.lite.example
+-rw-r--r--  1 root root    201 May 25 21:00 .golangci.yml
+
+=== image lines in compose ===
+3:    image: wechatopenai/weknora-ui:${WEKNORA_VERSION:-latest}
+29:    image: wechatopenai/weknora-app:${WEKNORA_VERSION:-latest}
+170:      - WEKNORA_SANDBOX_DOCKER_IMAGE=${WEKNORA_SANDBOX_DOCKER_IMAGE:-wechatopenai/weknora-sandbox:${WEKNORA_VERSION:-latest}}
+196:    image: wechatopenai/weknora-sandbox:${WEKNORA_VERSION:-latest}
+207:    image: wechatopenai/weknora-docreader:${WEKNORA_VERSION:-latest}
+257:    image: paradedb/paradedb:v0.22.2-pg17
+280:    image: redis:7.0-alpine
+295:    image: busybox:1.36
+309:    image: searxng/searxng:latest
+319:      - INSTANCE_NAME=weknora-searxng
+324:      - SEARXNG_SECRET=${SEARXNG_SECRET:-weknora-default-searxng-secret-rotate-before-exposing-publicly}
+342:    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+365:    image: jaegertracing/all-in-one:1.76.0
+390:    image: neo4j:2025.10.1
+411:    image: qdrant/qdrant:v1.16.2
+426:    image: milvusdb/milvus:v2.6.11
+454:    image: semitechnologies/weaviate:1.28.4
+493:    image: apache/doris:fe-4.1.0
+512:    image: apache/doris:be-4.1.0
+532:    image: dexidp/dex:latest
+564:    image: paradedb/paradedb:v0.22.2-pg17
+597:    image: clickhouse/clickhouse-server:24.8
+621:    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+649:    image: langfuse/langfuse-worker:3
+688:      SALT: ${LANGFUSE_SALT:-weknora-langfuse-dev-salt-change-me}
+691:      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-weknora-langfuse-dev-nextauth-secret-change-me}
+721:    image: langfuse/langfuse:3
+
+=== volumes section ===
+8:    container_name: WeKnora-frontend
+35:    container_name: WeKnora-app
+38:    volumes:
+197:    container_name: WeKnora-sandbox
+213:    container_name: WeKnora-docreader
+222:    volumes:
+258:    container_name: WeKnora-postgres
+265:    volumes:
+281:    container_name: WeKnora-redis
+296:    container_name: WeKnora-searxng-init
+298:    volumes:
+310:    container_name: WeKnora-searxng
+315:    volumes:
+343:    container_name: WeKnora-minio
+351:    volumes:
+366:    container_name: WeKnora-jaeger
+380:    volumes:
+391:    container_name: WeKnora-neo4j
+392:    volumes:
+412:    container_name: WeKnora-qdrant
+416:    volumes:
+427:    container_name: WeKnora-milvus
+445:    volumes:
+455:    container_name: WeKnora-weaviate
+468:    volumes:
+494:    container_name: WeKnora-doris-fe
+495:    hostname: doris-fe
+502:    volumes:
+513:    container_name: WeKnora-doris-be
+514:    hostname: doris-be
+522:    volumes:
+533:    container_name: dex
+536:    volumes:
+565:    container_name: WeKnora-langfuse-db-init
+598:    container_name: WeKnora-langfuse-clickhouse
+605:    volumes:
+622:    container_name: WeKnora-langfuse-minio
+635:    volumes:
+650:    container_name: WeKnora-langfuse-worker
+722:    container_name: WeKnora-langfuse-web
+766:volumes:

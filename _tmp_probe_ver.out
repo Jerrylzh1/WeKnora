@@ -1,0 +1,11 @@
+=== WEKNORA_VERSION in .env ===
+
+
+=== app image id ===
+sha256:6f166c7384395c1437203f4e762c44f1ebc0e056381e5d6f2da4d7b78d7cf718
+REPOSITORY                 TAG       IMAGE ID       CREATED        SIZE
+wechatopenai/weknora-app   latest    6f166c738439   2 months ago   1.65GB
+
+=== docker buildx / compose available ===
+Docker Compose version v2.23.3
+github.com/docker/buildx v0.6.3-docker 266c0eac611d64fcc0c72d80206aa364e826758d

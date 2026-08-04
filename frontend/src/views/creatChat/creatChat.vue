@@ -267,10 +267,14 @@ const handleKBEditorSuccess = (kbId: string) => {
 
 .dialogue-title {
     display: flex;
+    justify-content: center;
+    text-align: center;
     color: var(--td-text-color-primary);
     font-family: var(--app-font-family);
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 600;
+    letter-spacing: 1.5px;
+    line-height: 1.4;
     align-items: center;
     margin-bottom: 0;
 

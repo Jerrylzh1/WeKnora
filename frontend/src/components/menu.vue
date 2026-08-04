@@ -1271,8 +1271,11 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
         overflow: hidden;
 
         .logo {
-            width: 128px;
-            height: auto;
+            height: 34px;
+            width: auto;
+            max-width: 100%;
+            object-fit: contain;
+            display: block;
         }
 
         .lite-badge {
@@ -1887,9 +1890,9 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
 }
 </style>
 <style lang="less">
-// Dark mode: invert dark logo to light
+// Dark mode: 透明背景 logo 的深色图形反相为浅色，适配深色侧边栏
 html[theme-mode="dark"] .aside_box .logo_box .logo {
-    filter: invert(1) hue-rotate(180deg);
+    filter: invert(1);
 }
 
 // Dark mode: 滚动条在深色背景下需要更亮的颜色才看得见
