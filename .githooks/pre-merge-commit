@@ -1,0 +1,24 @@
+#!/bin/sh
+# ============================================================================
+# WeKnora 分支保护钩子：禁止在 main 分支上执行 merge
+# ----------------------------------------------------------------------------
+# 原则（见 docs/branching-policy.md）：
+#   - main 是上游主干的本地镜像，只通过 `git pull`（快进）更新，
+#     绝不允许本地把任何分支（尤其是 dev）合并进 main。
+#   - 单向同步：只允许 “main -> dev”，即 git checkout dev && git merge main。
+# 本钩子在创建 merge 提交前运行，若当前分支是 main 则拒绝。
+# ============================================================================
+
+current_branch="$(git rev-parse --abbrev-ref HEAD)"
+
+if [ "$current_branch" = "main" ]; then
+  echo ""
+  echo "🚫 拒绝在 main 分支上执行 merge！"
+  echo "   main 是上游主干，禁止本地合并（含 dev 或其它分支）。"
+  echo "   同步 main 请用：  git checkout main && git pull"
+  echo "   把更新带入 dev 请用：  git checkout dev && git merge main"
+  echo ""
+  exit 1
+fi
+
+exit 0

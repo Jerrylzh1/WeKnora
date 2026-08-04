@@ -1,152 +1,117 @@
 <template>
   <div class="login-layout">
-    <div class="animated-bg">
-      <div class="knowledge-node node-1">
-        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-        </svg>
-      </div>
-      <div class="knowledge-node node-2">
-        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-        </svg>
-      </div>
-      <div class="knowledge-node node-3">
-        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 2L2 7l10 5 10-5-10-5z" />
-          <path d="M2 17l10 5 10-5" />
-          <path d="M2 12l10 5 10-5" />
-        </svg>
-      </div>
-      <div class="knowledge-node node-4">
-        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <ellipse cx="12" cy="5" rx="9" ry="3" />
-          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-        </svg>
-      </div>
-      <div class="knowledge-node node-5">
-        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8" />
-          <path d="m21 21-4.35-4.35" />
-        </svg>
-      </div>
-      <div class="knowledge-node node-6">
-        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path
-            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-          <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-          <line x1="12" y1="22.08" x2="12" y2="12" />
-        </svg>
-      </div>
-      <div class="knowledge-node node-7">
-        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-        </svg>
-      </div>
-      <div class="knowledge-node node-8">
-        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-        </svg>
-      </div>
-      <div class="knowledge-node node-9">
-        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-      </div>
-      <div class="knowledge-node node-10">
-        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="3" />
-          <path
-            d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24" />
-        </svg>
-      </div>
-      <div class="knowledge-node node-11">
-        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 11l3 3L22 4" />
-          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-        </svg>
-      </div>
-      <div class="knowledge-node node-12">
-        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polygon
-            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-        </svg>
-      </div>
+    <!-- 公交线网知识图谱（背景光环，偏中放大） -->
+    <div class="knowledge-network" aria-hidden="true">
+      <svg class="kn-svg" viewBox="0 0 600 600" preserveAspectRatio="xMidYMid slice" xmlns:xlink="http://www.w3.org/1999/xlink">
+        <defs>
+          <radialGradient id="knHubGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.5"/>
+            <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
 
-      <svg class="knowledge-lines" viewBox="0 0 100 100" preserveAspectRatio="none">
-        <line class="connection-line line-1" x1="20" y1="15" x2="35" y2="25" />
-        <line class="connection-line line-2" x1="35" y1="25" x2="55" y2="20" />
-        <line class="connection-line line-3" x1="55" y1="20" x2="85" y2="12" />
-        <line class="connection-line line-4" x1="8" y1="35" x2="25" y2="45" />
-        <line class="connection-line line-5" x1="25" y1="45" x2="65" y2="48" />
-        <line class="connection-line line-6" x1="20" y1="60" x2="60" y2="75" />
-        <line class="connection-line line-7" x1="20" y1="15" x2="20" y2="60" />
-        <line class="connection-line line-8" x1="55" y1="20" x2="45" y2="50" />
-        <line class="connection-line line-9" x1="65" y1="48" x2="90" y2="38" />
-        <line class="connection-line line-10" x1="40" y1="70" x2="75" y2="80" />
-        <line class="connection-line line-11" x1="35" y1="25" x2="25" y2="45" />
-        <line class="connection-line line-12" x1="75" y1="30" x2="65" y2="48" />
+        <!-- 径向支线 -->
+        <g class="kn-spoke-group">
+          <line class="kn-spoke" x1="300" y1="300" x2="530" y2="300"/>
+          <line class="kn-spoke" x1="300" y1="300" x2="499" y2="415"/>
+          <line class="kn-spoke" x1="300" y1="300" x2="415" y2="499"/>
+          <line class="kn-spoke" x1="300" y1="300" x2="300" y2="530"/>
+          <line class="kn-spoke" x1="300" y1="300" x2="185" y2="499"/>
+          <line class="kn-spoke" x1="300" y1="300" x2="101" y2="415"/>
+          <line class="kn-spoke" x1="300" y1="300" x2="70"  y2="300"/>
+          <line class="kn-spoke" x1="300" y1="300" x2="101" y2="185"/>
+          <line class="kn-spoke" x1="300" y1="300" x2="185" y2="101"/>
+          <line class="kn-spoke" x1="300" y1="300" x2="300" y2="70"/>
+          <line class="kn-spoke" x1="300" y1="300" x2="415" y2="101"/>
+          <line class="kn-spoke" x1="300" y1="300" x2="499" y2="185"/>
+        </g>
+
+        <!-- 内环（琥珀） -->
+        <circle class="kn-ring kn-ring--inner" cx="300" cy="300" r="150">
+          <animate attributeName="stroke-dashoffset" from="0" to="-90" dur="14s" repeatCount="indefinite"/>
+        </circle>
+        <!-- 外环（白色虚线流动） -->
+        <circle class="kn-ring" cx="300" cy="300" r="230">
+          <animate attributeName="stroke-dashoffset" from="0" to="-120" dur="10s" repeatCount="indefinite"/>
+        </circle>
+
+        <!-- 站点节点 -->
+        <circle class="kn-station" cx="530" cy="300" r="6" style="animation-delay:0s"/>
+        <circle class="kn-station" cx="499" cy="415" r="6" style="animation-delay:.4s"/>
+        <circle class="kn-station" cx="415" cy="499" r="6" style="animation-delay:.8s"/>
+        <circle class="kn-station" cx="300" cy="530" r="6" style="animation-delay:1.2s"/>
+        <circle class="kn-station" cx="185" cy="499" r="6" style="animation-delay:1.6s"/>
+        <circle class="kn-station" cx="101" cy="415" r="6" style="animation-delay:2s"/>
+        <circle class="kn-station" cx="70"  cy="300" r="6" style="animation-delay:2.4s"/>
+        <circle class="kn-station" cx="101" cy="185" r="6" style="animation-delay:2.8s"/>
+        <circle class="kn-station" cx="185" cy="101" r="6" style="animation-delay:3.2s"/>
+        <circle class="kn-station" cx="300" cy="70"  r="6" style="animation-delay:3.6s"/>
+        <circle class="kn-station" cx="415" cy="101" r="6" style="animation-delay:4s"/>
+        <circle class="kn-station" cx="499" cy="185" r="6" style="animation-delay:4.4s"/>
+
+        <!-- 中心枢纽 -->
+        <circle class="kn-hub-glow" cx="300" cy="300" r="22" fill="url(#knHubGlow)"/>
+        <circle class="kn-hub" cx="300" cy="300" r="13"/>
+        <circle class="kn-hub-ring" cx="300" cy="300" r="18">
+          <animate attributeName="r" values="18;26;18" dur="3.4s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.9;0;0.9" dur="3.4s" repeatCount="indefinite"/>
+        </circle>
+
+        <!-- 沿外环行驶的小巴 -->
+        <g class="kn-bus-anim">
+          <g transform="scale(0.95)">
+            <ellipse class="kn-bus-shadow" cx="0" cy="16" rx="24" ry="5"/>
+            <rect x="-24" y="-14" width="48" height="26" rx="6" fill="#ffffff"/>
+            <rect x="-18" y="-9" width="11" height="8" rx="1.5" fill="#FFB300"/>
+            <rect x="-4"  y="-9" width="11" height="8" rx="1.5" fill="#FFB300"/>
+            <rect x="10"  y="-9" width="10" height="8" rx="1.5" fill="#FFB300"/>
+            <rect x="-4"  y="2"  width="10" height="10" rx="1" fill="#7F1D1D"/>
+            <circle cx="-12" cy="13" r="4" fill="#7F1D1D"/>
+            <circle cx="12"  cy="13" r="4" fill="#7F1D1D"/>
+          </g>
+          <animateMotion dur="32s" repeatCount="indefinite" rotate="auto">
+            <mpath href="#knRingPath" xlink:href="#knRingPath"/>
+          </animateMotion>
+        </g>
+        <!-- 行驶路径（不可见，供 animateMotion 引用） -->
+        <path id="knRingPath" d="M 70,300 a 230,230 0 1,0 460,0 a 230,230 0 1,0 -460,0" fill="none" stroke="none"/>
       </svg>
     </div>
 
-    <!-- Logo - Top Left -->
+    <!-- 左上角品牌 -->
     <a href="https://github.com/Tencent/WeKnora" target="_blank" class="header-logo" :title="$t('common.github')">
-      <img src="@/assets/img/weknora.png" alt="WeKnora" class="logo-image" />
+      <span class="brand-text">
+        <span class="brand-name">北京公交</span>
+        <span class="brand-sub">知识库</span>
+      </span>
     </a>
 
-    <!-- Header Links - Top Right -->
-    <div class="header-links">
-      <a href="https://weknora.weixin.qq.com" target="_blank" class="header-link" :title="$t('common.website')">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-          stroke-linecap="round">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="2" y1="12" x2="22" y2="12" />
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-        </svg>
-        <span class="link-text">{{ $t('common.website') }}</span>
-      </a>
-
-      <a href="https://github.com/Tencent/WeKnora" target="_blank" class="header-link" :title="$t('common.info')">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
-          <path
-            d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
-        </svg>
-        <span class="link-text">GitHub</span>
-      </a>
-
-      <div class="language-switch">
-        <button @click="toggleLanguageMenu" class="header-link" :title="currentLangOption?.label">
-          <span class="lang-flag-icon">{{ currentLangOption?.flag }}</span>
-          <span class="link-text">{{ currentLangOption?.shortLabel }}</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-            stroke-linecap="round">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </button>
-
-        <!-- Language Dropdown -->
-        <div v-if="showLanguageMenu" class="language-dropdown">
-          <div v-for="lang in languageOptions" :key="lang.value" @click="selectLanguage(lang.value)"
-            class="language-option" :class="{ active: currentLanguage === lang.value }">
-            <span class="lang-flag">{{ lang.flag }}</span>
-            <span class="lang-label">{{ lang.label }}</span>
-            <span v-if="currentLanguage === lang.value" class="check-icon">✓</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Left Showcase Section -->
+    <!-- 左侧展示区 -->
     <div class="showcase-section">
       <div class="showcase-content">
-        <p class="showcase-subtitle">{{ $t('platform.subtitle') }}</p>
-        <p class="showcase-description">{{ $t('platform.description') }}</p>
+        <div class="brand-badge">🚌 公交行业专属知识库</div>
+        <h1 class="showcase-title">让公交运营知识，随问随答</h1>
+        <p class="showcase-description">
+          面向公交行业打造统一知识库，汇聚线路、调度、维修、安全与乘客服务等全场景资料，用 RAG
+          问答与智能体，让每一次检索都快人一步。
+        </p>
+
+        <!-- 轮播（通俗优点介绍，玻璃卡） -->
+        <div class="carousel-container">
+          <swiper :modules="modules" :slides-per-view="1" :loop="true" :autoplay="{
+            delay: 4000,
+            disableOnInteraction: false,
+          }" :effect="'fade'" :fade-effect="{ crossFade: true }"
+            :pagination="{ clickable: true, dynamicBullets: false }" :speed="800" class="screenshot-swiper">
+            <swiper-slide v-for="(slide, index) in slides" :key="index">
+              <div class="kb-slide-card">
+                <div class="kb-slide__icon">{{ ['📚', '🚀', '🚌', '🛡️'][index] }}</div>
+                <div class="kb-slide__title">{{ slide.title }}</div>
+                <div class="kb-slide__desc">{{ slide.description }}</div>
+              </div>
+            </swiper-slide>
+          </swiper>
+        </div>
 
         <div class="feature-tags">
           <span class="tag">{{ $t('platform.rag') }}</span>
@@ -155,24 +120,18 @@
           <span class="tag">{{ $t('platform.hybridSearch') }}</span>
         </div>
 
-        <!-- Swiper Carousel -->
-        <div class="carousel-container">
-          <swiper :modules="modules" :slides-per-view="1" :loop="true" :autoplay="{
-            delay: 4000,
-            disableOnInteraction: false,
-          }" :effect="'fade'" :fade-effect="{ crossFade: true }"
-            :pagination="{ clickable: true, dynamicBullets: false }" :speed="800" class="screenshot-swiper">
-            <swiper-slide v-for="(slide, index) in slides" :key="index">
-              <div class="slide-content">
-                <img :src="slide.image" :alt="slide.title" class="slide-image" />
-              </div>
-            </swiper-slide>
-          </swiper>
+        <div class="scenario-chips">
+          <span class="chip">线路运营</span>
+          <span class="chip">车辆维修</span>
+          <span class="chip">安全规范</span>
+          <span class="chip">乘客服务</span>
+          <span class="chip">调度指挥</span>
         </div>
+
       </div>
     </div>
 
-    <!-- Right Form Section -->
+    <!-- 右侧表单区 -->
     <div class="form-section">
       <div class="form-panel">
         <!-- Login Card -->
@@ -180,7 +139,6 @@
           <div class="form-header">
             <h2 class="form-title">{{ $t('auth.login') }}</h2>
             <p class="form-welcome">{{ $t('auth.subtitle') }}</p>
-            <p v-if="registrationEnabled" class="form-hint">{{ $t('auth.loginHint') }}</p>
           </div>
 
           <div class="form-content">
@@ -238,15 +196,8 @@
           </div>
         </div>
 
-        <!-- Register Card. Renders when the user is in register mode
-             AND either self-service registration is enabled OR they
-             arrived with a valid share-link token (which bypasses the
-             invite_only gate). -->
+        <!-- Register Card -->
         <div class="form-card" v-if="isRegisterMode && (registrationEnabled || inviteLookup)">
-          <!-- Share-link banner: shown only when ?token= resolved to a
-               real invitation row. Sits above the form header so the
-               invitee instantly sees who invited them and into which
-               workspace, without bumping the existing register UX. -->
           <div v-if="inviteLookup" class="invite-banner">
             <t-icon name="link" class="invite-banner__icon" />
             <div class="invite-banner__text">
@@ -301,7 +252,6 @@
               </a>
             </div>
 
-            <!-- Features list for register -->
             <div class="login-features">
               <div class="feature-item">
                 <span class="feature-icon">✓</span>
@@ -368,23 +318,23 @@ const modules = [Autoplay, EffectFade, Pagination]
 const slides = [
   {
     image: screenshot4,
-    title: t('platform.carousel.agenticRagTitle'),
-    description: t('platform.carousel.agenticRagDesc')
+    title: '知识随手查',
+    description: '线路、排班、保修手册，问一句就找到，不再翻一堆文档'
   },
   {
     image: screenshot2,
-    title: t('platform.carousel.hybridSearchTitle'),
-    description: t('platform.carousel.hybridSearchDesc')
+    title: '新人快速上手',
+    description: '把老师傅的经验存进知识库，新司机、新调度员也能马上学会'
   },
   {
     image: screenshot3,
-    title: t('platform.carousel.wikiTitle'),
-    description: t('platform.carousel.wikiDesc')
+    title: '调度更省心',
+    description: '客流、准点率、异常一站看全，排班决策有据可依'
   },
   {
     image: screenshot1,
-    title: t('platform.carousel.smartDocRetrievalTitle'),
-    description: t('platform.carousel.smartDocRetrievalDesc')
+    title: '安全有保障',
+    description: '安全规范、应急预案随时可查，隐患早发现、早处理'
   }
 ]
 
@@ -557,7 +507,7 @@ const persistLoginResponse = async (response: any) => {
         name: activeTenant.name || '',
         owner_id: response.user.id || '',
         created_at: activeTenant.created_at || new Date().toISOString(),
-        updated_at: activeTenant.updated_at || new Date().toISOString()
+        updated_at: activeTenant.created_at || new Date().toISOString()
       })
     } else {
       authStore.setTenant(null)
@@ -782,12 +732,27 @@ onMounted(async () => {
 
 <style lang="less" scoped>
 .login-layout {
+  // 通过 TDesign 主题变量统一改主色为「北京公交红」
+  --td-brand-color: #B91C1C;
+  --td-brand-color-hover: #DC2626;
+  --td-brand-color-active: #991B1B;
+  --td-brand-color-light: rgba(185, 28, 28, 0.10);
+  --td-brand-color-light-active: rgba(185, 28, 28, 0.20);
+
   display: flex;
   width: 100%;
   min-height: 100%;
   overflow: hidden;
   position: relative;
-  background: linear-gradient(225deg, #022c22 0%, #064e3b 15%, #065f46 25%, #047857 38%, #059669 50%, #07C05F 65%, #10B981 78%, #34D399 90%, #6EE7B7 100%);
+  background: linear-gradient(225deg,
+      #4a0c0c 0%,
+      #6b1111 18%,
+      #8B1A1A 32%,
+      #a32020 46%,
+      #B91C1C 62%,
+      #c93535 76%,
+      #dc5555 88%,
+      #ef7777 100%);
 
   &::before {
     content: '';
@@ -796,497 +761,338 @@ onMounted(async () => {
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.06) 0%, transparent 50%),
-      radial-gradient(circle at 80% 50%, rgba(255, 255, 255, 0.04) 0%, transparent 50%);
+    background:
+      radial-gradient(circle at 18% 45%, rgba(255, 255, 255, 0.08) 0%, transparent 45%),
+      radial-gradient(circle at 82% 55%, rgba(255, 200, 150, 0.07) 0%, transparent 50%);
     pointer-events: none;
   }
 }
 
-.animated-bg {
+/* ===================== 公交线网知识图谱（偏中放大背景光环） ===================== */
+.knowledge-network {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  z-index: 1;
-  overflow: hidden;
-  contain: strict;
-}
-
-.knowledge-node {
-  position: absolute;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow:
-    0 0 15px rgba(255, 255, 255, 0.35),
-    0 0 30px rgba(16, 185, 129, 0.2),
-    inset 0 0 8px rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: nodePulse 5s infinite ease-in-out;
-  will-change: transform, opacity;
-}
-
-.node-icon {
-  width: 20px;
-  height: 20px;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.node-1 {
-  top: 15%;
-  left: 20%;
-  animation-delay: 0s;
-}
-
-.node-2 {
-  top: 25%;
-  left: 35%;
-  animation-delay: 0.5s;
-}
-
-.node-3 {
-  top: 20%;
-  left: 55%;
-  animation-delay: 1s;
-}
-
-.node-4 {
-  top: 30%;
-  left: 75%;
-  animation-delay: 1.5s;
-}
-
-.node-5 {
-  top: 45%;
-  left: 25%;
-  animation-delay: 2s;
-}
-
-.node-6 {
+  left: 44%;
   top: 50%;
-  left: 45%;
-  animation-delay: 2.5s;
+  transform: translate(-50%, -50%);
+  width: 1240px;
+  height: 1240px;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.6;
 }
 
-.node-7 {
-  top: 48%;
-  left: 65%;
-  animation-delay: 3s;
-}
-
-.node-8 {
-  top: 60%;
-  left: 20%;
-  animation-delay: 0.3s;
-}
-
-.node-9 {
-  top: 12%;
-  right: 15%;
-  animation-delay: 1.8s;
-}
-
-.node-10 {
-  top: 38%;
-  right: 10%;
-  animation-delay: 2.3s;
-}
-
-.node-11 {
-  top: 70%;
-  left: 40%;
-  animation-delay: 0.8s;
-}
-
-.node-12 {
-  top: 65%;
-  left: 80%;
-  animation-delay: 1.3s;
-}
-
-@keyframes nodePulse {
-
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.65;
-  }
-
-  50% {
-    transform: scale(1.08);
-    opacity: 0.9;
-  }
-}
-
-.knowledge-lines {
-  position: absolute;
-  top: 0;
-  left: 0;
+.kn-svg {
   width: 100%;
   height: 100%;
-  opacity: 0.35;
+  display: block;
 }
 
-.connection-line {
-  stroke: rgba(255, 255, 255, 0.5);
-  stroke-width: 1.5;
-  stroke-dasharray: 6, 3;
+.kn-ring {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.66);
+  stroke-width: 2;
+  stroke-dasharray: 3 9;
   stroke-linecap: round;
-  animation: lineFlow 10s infinite linear;
-  will-change: stroke-dashoffset;
 }
 
-.line-1 {
-  animation-delay: 0s;
+.kn-ring--inner {
+  stroke: rgba(255, 179, 0, 0.6);
+  stroke-width: 1.6;
+  stroke-dasharray: 2 7;
 }
 
-.line-2 {
-  animation-delay: 0.5s;
+.kn-spoke {
+  stroke: rgba(255, 255, 255, 0.32);
+  stroke-width: 1.2;
 }
 
-.line-3 {
-  animation-delay: 1s;
+.kn-station {
+  fill: #ffffff;
+  stroke: #FFC83A;
+  stroke-width: 3;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: knPulse 4.5s ease-in-out infinite;
 }
 
-.line-4 {
-  animation-delay: 0.3s;
+@keyframes knPulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.45); opacity: 1; }
 }
 
-.line-5 {
-  animation-delay: 0.8s;
+.kn-hub-glow {
+  fill: rgba(255, 255, 255, 0.3);
+  animation: knHub 3.4s ease-in-out infinite;
 }
 
-.line-6 {
-  animation-delay: 1.3s;
+@keyframes knHub {
+  0%, 100% { transform: scale(1); opacity: 0.65; }
+  50% { transform: scale(1.5); opacity: 0; }
 }
 
-.line-7 {
-  animation-delay: 1.8s;
+.kn-hub {
+  fill: #ffffff;
 }
 
-.line-8 {
-  animation-delay: 2.3s;
+.kn-hub-ring {
+  fill: none;
+  stroke: #FFC83A;
+  stroke-width: 3;
 }
 
-.line-9 {
-  animation-delay: 0.2s;
-}
-
-.line-10 {
-  animation-delay: 0.7s;
-}
-
-.line-11 {
-  animation-delay: 0.9s;
-}
-
-.line-12 {
-  animation-delay: 1.5s;
-}
-
-@keyframes lineFlow {
-  0% {
-    stroke-dashoffset: 0;
-  }
-
-  100% {
-    stroke-dashoffset: 18;
-  }
+.kn-bus-shadow {
+  fill: rgba(0, 0, 0, 0.18);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .knowledge-node {
-    animation: none;
-    opacity: 0.65;
+  .kn-ring,
+  .kn-station,
+  .kn-hub-glow {
+    animation: none !important;
   }
 
-  .connection-line {
-    animation: none;
+  .kn-bus-anim {
+    display: none;
   }
 }
 
-/* Left Showcase Section */
+/* 左上角品牌 */
+.header-logo {
+  position: fixed;
+  top: 28px;
+  left: 48px;
+  z-index: 100;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+
+  .brand-logo {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.25));
+  }
+
+  .brand-text {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+    line-height: 1.04;
+  }
+
+  .brand-name {
+    font-size: 30px;
+    font-weight: 800;
+    color: #ffffff;
+    font-family: var(--app-font-family);
+    letter-spacing: 1px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  }
+
+  .brand-sub {
+    font-size: 22px;
+    font-weight: 700;
+    color: #FFD27A;
+    font-family: var(--app-font-family);
+    letter-spacing: 2px;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* 左侧展示区 */
 .showcase-section {
   flex: 0 0 52%;
   display: flex;
-  align-items: flex-end;
-  padding: 100px 30px 100px 50px;
+  align-items: center;
+  padding: 90px 20px 90px 48px;
   box-sizing: border-box;
   position: relative;
 }
 
 .showcase-content {
   width: 100%;
-  max-width: 600px;
+  max-width: 720px;
   position: relative;
   z-index: 2;
   display: flex;
   flex-direction: column;
-  margin-bottom: 60px;
+  margin-bottom: 0;
 }
 
-.showcase-subtitle {
-  margin-top: 0;
-  font-size: 22px;
-  color: rgba(255, 255, 255, 0.95);
-  margin: 0 0 8px 0;
+.brand-badge {
+  align-self: flex-start;
+  display: inline-block;
+  padding: 8px 18px;
+  margin-bottom: 20px;
+  border-radius: 20px;
+  background: rgba(255, 179, 0, 0.18);
+  border: 1px solid rgba(255, 179, 0, 0.45);
+  color: #FFD27A;
+  font-size: 16px;
+  font-weight: 600;
   font-family: var(--app-font-family);
-  line-height: 1.4;
-  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.showcase-title {
+  margin: 0 0 16px 0;
+  font-size: 50px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #ffffff;
+  font-family: var(--app-font-family);
+  letter-spacing: 1px;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.28);
 }
 
 .showcase-description {
-  font-size: 15px;
-  color: rgba(255, 255, 255, 0.8);
-  margin: 0 0 28px 0;
+  font-size: 19px;
+  color: rgba(255, 255, 255, 0.86);
+  margin: 0 0 26px 0;
+  line-height: 1.7;
   font-family: var(--app-font-family);
-  line-height: 1.5;
 }
 
 .feature-tags {
   display: flex;
   gap: 12px;
-  margin-bottom: 40px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
 }
 
 .tag {
   display: inline-block;
   padding: 8px 20px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 20px;
-  color: var(--td-text-color-anti);
-  font-size: 14px;
+  color: #ffffff;
+  font-size: 15.5px;
   font-weight: 500;
   font-family: var(--app-font-family);
 }
 
-/* Carousel */
+.scenario-chips {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-block;
+  padding: 7px 16px;
+  border-radius: 8px;
+  background: rgba(255, 179, 0, 0.14);
+  border: 1px solid rgba(255, 179, 0, 0.35);
+  color: #FFE0A3;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: var(--app-font-family);
+}
+
+/* 轮播（玻璃卡，通俗优点介绍） */
 .carousel-container {
   width: 100%;
-  margin-top: 48px;
+  margin: 4px 0 24px;
 }
 
 .screenshot-swiper {
   width: 100%;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  padding-bottom: 40px;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+  padding: 22px 22px 42px;
 
   :deep(.swiper-wrapper) {
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   :deep(.swiper-pagination) {
-    bottom: 15px !important;
+    bottom: 16px !important;
     z-index: 10;
   }
 
   :deep(.swiper-pagination-bullet) {
-    width: 10px;
-    height: 10px;
-    background: rgba(255, 255, 255, 0.5);
+    width: 8px;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.35);
     opacity: 1;
     transition: all 0.3s ease;
-    margin: 0 6px !important;
+    margin: 0 4px !important;
   }
 
   :deep(.swiper-pagination-bullet-active) {
-    background: var(--td-bg-color-container);
-    width: 28px;
-    border-radius: 5px;
+    background: #FFB300;
+    width: 22px;
+    border-radius: 4px;
   }
 }
 
-.slide-content {
-  width: 100%;
-  height: 100%;
-  background: var(--td-bg-color-container);
-  border-radius: 16px;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.kb-slide-card {
+  min-height: 110px;
 }
 
-.slide-image {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: contain;
+.kb-slide__icon {
+  font-size: 28px;
+  margin-bottom: 10px;
 }
 
-/* Right Form Section */
+.kb-slide__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 7px;
+  font-family: var(--app-font-family);
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.2);
+}
+
+.kb-slide__desc {
+  font-size: 16px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.85);
+  font-family: var(--app-font-family);
+}
+
+
+/* 右侧表单区 */
 .form-section {
   flex: 0 0 48%;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  padding: 40px 50px 100px 30px;
+  padding: 40px 50px 40px 30px;
   box-sizing: border-box;
   position: relative;
 }
 
 .form-panel {
   width: 100%;
-  max-width: 480px;
-  margin-bottom: 60px;
+  max-width: 460px;
+  margin-bottom: 0;
   position: relative;
   z-index: 2;
-}
-
-.header-logo {
-  position: fixed;
-  top: 32px;
-  left: 50px;
-  z-index: 100;
-  cursor: pointer;
-
-  .logo-image {
-    width: 120px;
-    height: auto;
-  }
-}
-
-.header-links {
-  position: fixed;
-  top: 28px;
-  right: 28px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  z-index: 100;
-}
-
-.header-link {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 15px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: var(--td-text-color-anti);
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 600;
-  font-family: var(--app-font-family);
-  letter-spacing: 0.2px;
-  cursor: pointer;
-  position: relative;
-
-  svg {
-    flex-shrink: 0;
-  }
-
-  .link-text {
-    line-height: 1;
-  }
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.3);
-    border-color: rgba(255, 255, 255, 0.4);
-    color: var(--td-text-color-anti);
-  }
-}
-
-.language-switch {
-  position: relative;
-
-  button {
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    color: var(--td-text-color-anti);
-
-    .lang-flag-icon {
-      font-size: 16px;
-      line-height: 1;
-      flex-shrink: 0;
-    }
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.3);
-      border-color: rgba(255, 255, 255, 0.4);
-    }
-
-    svg:last-child {
-      margin-left: 2px;
-      flex-shrink: 0;
-    }
-  }
-}
-
-.language-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  min-width: 160px;
-  background: rgba(255, 255, 255, 0.97);
-  border: 1px solid var(--td-component-stroke);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  overflow: hidden;
-  z-index: 1000;
-}
-
-.language-option {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  cursor: pointer;
-  font-size: 13px;
-  font-family: var(--app-font-family);
-  color: var(--td-text-color-primary);
-
-  .lang-flag {
-    font-size: 16px;
-    flex-shrink: 0;
-  }
-
-  .lang-label {
-    flex: 1;
-  }
-
-  .check-icon {
-    color: var(--td-success-color);
-    font-weight: 700;
-    font-size: 14px;
-    flex-shrink: 0;
-  }
-
-  &:hover {
-    background: var(--td-bg-color-secondarycontainer);
-  }
-
-  &.active {
-    background: var(--td-success-color-light);
-    color: var(--td-brand-color-active);
-  }
 }
 
 .form-card {
   background: rgba(255, 255, 255, 0.97);
   border-radius: 16px;
   padding: 40px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18);
   box-sizing: border-box;
   border: none;
   width: 100%;
 }
 
-/* Share-link invitation banner. Sits above the register form when the
- * user arrived via /register?token=xxx; gives them confirmation of who
- * invited them before they fill anything in. Subtle, neutral card —
- * the page background is heavily brand-coloured already, so a loud
- * tinted banner clashes; we lean on the form's own surface tokens. */
 .invite-banner {
   display: flex;
   align-items: flex-start;
@@ -1357,15 +1163,13 @@ onMounted(async () => {
   margin: 10px 0 0;
   padding: 8px 12px;
   border-radius: 8px;
-  background: var(--td-success-color-light, rgba(7, 192, 95, 0.08));
+  background: var(--td-success-color-light, rgba(21, 101, 192, 0.08));
   color: var(--td-brand-color-active);
   font-size: 12.5px;
   line-height: 1.5;
   font-family: var(--app-font-family);
 }
 
-/* 注册入口：从底部小字链接升级为带分隔线的醒目次级按钮，
-   让首次访客一眼就能找到「创建账户」。 */
 .register-cta {
   margin-top: 8px;
 
@@ -1405,7 +1209,7 @@ onMounted(async () => {
     &:hover {
       border-color: var(--td-brand-color-active);
       color: var(--td-brand-color-active);
-      background: var(--td-success-color-light, rgba(7, 192, 95, 0.08));
+      background: var(--td-brand-color-light);
     }
   }
 }
@@ -1436,7 +1240,7 @@ onMounted(async () => {
 
     &:focus-within {
       border-color: var(--td-brand-color);
-      box-shadow: 0 0 0 3px rgba(7, 192, 95, 0.1);
+      box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.15);
     }
 
     &:hover {
@@ -1566,7 +1370,7 @@ onMounted(async () => {
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      background: var(--td-success-color-light);
+      background: var(--td-brand-color-light);
       color: var(--td-brand-color-active);
       display: flex;
       align-items: center;
@@ -1583,231 +1387,115 @@ onMounted(async () => {
   }
 }
 
-/* Responsive Design */
+/* 响应式 */
 @media (max-width: 1024px) {
-  .knowledge-node:nth-of-type(n + 13) {
-    display: none;
-  }
-
-  .connection-line:nth-of-type(n + 13) {
-    display: none;
-  }
-
-  .showcase-subtitle {
-    font-size: 18px;
-  }
+  .showcase-title { font-size: 40px; }
 
   .header-logo {
-    top: 26px;
+    top: 24px;
     left: 40px;
 
-    .logo-image {
-      width: 100px;
-    }
+    .brand-logo { width: 56px; height: 56px; }
+    .brand-name { font-size: 22px; }
+    .brand-sub { font-size: 17px; }
   }
 
-  .header-links {
-    top: 22px;
-    right: 22px;
-    gap: 8px;
-
-    .link-text {
-      display: none;
-    }
-
-    .header-link {
-      padding: 10px;
-      gap: 0;
-    }
-  }
+  .knowledge-network { width: 900px; height: 900px; opacity: 0.55; }
 }
 
 @media (max-width: 768px) {
-  .login-layout {
-    flex-direction: column;
-  }
-
-  .knowledge-node:nth-of-type(n + 9) {
-    display: none;
-  }
-
-  .connection-line:nth-of-type(n + 9) {
-    display: none;
-  }
+  .login-layout { flex-direction: column; }
 
   .showcase-section {
     flex: 0 0 auto;
-    min-height: 50vh;
-    padding: 40px 24px;
+    min-height: 52vh;
+    padding: 80px 24px 24px;
   }
 
-  .showcase-content {
-    max-width: 100%;
-  }
+  .showcase-content { max-width: 100%; }
 
   .header-logo {
-    top: 22px;
+    top: 20px;
     left: 30px;
 
-    .logo-image {
-      width: 80px;
-    }
+    .brand-logo { width: 48px; height: 48px; }
+    .brand-name { font-size: 16px; }
+    .brand-sub { font-size: 13px; }
+    .brand-tag { display: none; }
   }
 
-  .showcase-subtitle {
-    font-size: 16px;
-    margin-bottom: 24px;
-  }
-
-  .feature-tags {
-    margin-bottom: 24px;
-  }
-
-  .carousel-container {
-    margin-top: 24px;
-  }
+  .showcase-title { font-size: 32px; margin-bottom: 16px; }
+  .feature-tags { margin-bottom: 14px; }
+  .scenario-chips { margin-bottom: 22px; }
 
   .form-section {
     flex: 0 0 auto;
     padding: 24px;
   }
 
-  .header-links {
-    top: 18px;
-    right: 18px;
-    gap: 8px;
+  .form-card { padding: 32px 24px; }
+  .form-title { font-size: 22px; }
 
-    .link-text {
-      display: inline;
-    }
-
-    .header-link {
-      padding: 8px 12px;
-      font-size: 12px;
-    }
-  }
-
-  .form-card {
-    padding: 32px 24px;
-  }
-
-  .form-title {
-    font-size: 22px;
-  }
+  .knowledge-network { width: 680px; height: 680px; opacity: 0.5; }
 }
 
 @media (max-width: 480px) {
-  .animated-bg {
-    display: none;
-  }
+  .knowledge-network { display: none; }
 
-  .showcase-section {
-    padding: 32px 20px;
-  }
+  .showcase-section { padding: 70px 20px 20px; }
+  .showcase-title { font-size: 26px; }
+
+  .tag { font-size: 12px; padding: 6px 14px; }
+  .chip { font-size: 11.5px; padding: 5px 12px; }
+
+  .form-section { padding: 20px; }
 
   .header-logo {
-    top: 18px;
+    top: 16px;
     left: 20px;
 
-    .logo-image {
-      width: 70px;
-    }
+    .brand-logo { width: 44px; height: 44px; }
+    .brand-sub { font-size: 11px; }
   }
 
-  .showcase-subtitle {
-    font-size: 14px;
-  }
-
-  .tag {
-    font-size: 12px;
-    padding: 6px 16px;
-  }
-
-  .form-section {
-    padding: 20px;
-  }
-
-  .header-links {
-    top: 14px;
-    right: 14px;
-    gap: 6px;
-    flex-wrap: wrap;
-
-    .header-link {
-      padding: 7px 10px;
-      font-size: 11px;
-    }
-  }
-
-  .form-card {
-    padding: 28px 20px;
-  }
-
-  .form-header {
-    margin-bottom: 24px;
-  }
+  .form-card { padding: 28px 20px; }
+  .form-header { margin-bottom: 24px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-
-  .knowledge-node,
-  .connection-line {
+  .kn-ring,
+  .kn-station,
+  .kn-hub-glow {
     animation: none !important;
     transition: none !important;
   }
 
-  .animated-bg {
-    display: none;
-  }
+  .knowledge-network { display: none; }
 }
 </style>
 
 <style lang="less">
 html[theme-mode="dark"] {
   .login-layout {
-    background: linear-gradient(225deg, #011a14 0%, #032e22 15%, #043a2c 25%, #05503d 38%, #046647 50%, #038a56 65%, #049b60 78%, #06a06a 90%, #07b074 100%);
+    background: linear-gradient(225deg,
+        #2a0808 0%,
+        #420a0a 18%,
+        #5C0E0E 32%,
+        #7a1212 46%,
+        #991B1B 62%,
+        #b52424 76%,
+        #d13535 88%,
+        #e85050 100%);
   }
 
-  .knowledge-node {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
-  }
+  .brand-name { color: #ffffff; }
 
-  .connection-line {
-    stroke: rgba(255, 255, 255, 0.25);
-  }
-
-  .header-logo .logo-image {
-    filter: invert(1) hue-rotate(180deg) brightness(1.1);
-  }
-
-  .header-link {
+.tag {
     background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.15);
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.2);
-    }
   }
 
-  .language-switch button {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.15);
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.2);
-    }
-  }
-
-  .language-dropdown {
-    background: rgba(36, 36, 36, 0.97) !important;
-    border-color: var(--td-component-stroke) !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
-  }
-
-  .tag {
-    background: rgba(255, 255, 255, 0.12);
+  .scenario-chips .chip {
+    background: rgba(255, 179, 0, 0.1);
   }
 
   .form-card {
@@ -1819,7 +1507,7 @@ html[theme-mode="dark"] {
     background: rgba(36, 36, 36, 0.97);
   }
 
-  .form-content .t-input {
+  .form-content :deep(.t-input) {
     background: var(--td-bg-color-page) !important;
     border-color: rgba(255, 255, 255, 0.1) !important;
 
@@ -1833,11 +1521,8 @@ html[theme-mode="dark"] {
   }
 
   .screenshot-swiper .swiper-pagination-bullet-active {
-    background: rgba(255, 255, 255, 0.9) !important;
+    background: #FFB300 !important;
   }
 
-  .login-features .feature-icon {
-    background: rgba(6, 176, 77, 0.15);
-  }
 }
 </style>

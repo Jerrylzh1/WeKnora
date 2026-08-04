@@ -1,0 +1,25 @@
+#!/bin/sh
+# ============================================================================
+# WeKnora 分支保护钩子：禁止直接推送 main 分支
+# ----------------------------------------------------------------------------
+# 原则（见 docs/branching-policy.md）：
+#   - main = 上游主干镜像，只允许通过 Pull Request 合入，禁止任何人直接推送。
+#   - dev  = 个人二开分支，可自由推送。
+# 本钩子在每次 `git push` 时运行，凡是“推送目标为 origin/main”一律拒绝。
+# ============================================================================
+
+while read local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main)
+      echo ""
+      echo "🚫 拒绝推送 main 分支！"
+      echo "   main 是上游主干，禁止直接推送。"
+      echo "   正确做法：把改动推到 dev（git push origin dev），再在 GitHub 上发起 PR 合入 main。"
+      echo "   同步 main：git checkout main && git pull"
+      echo ""
+      exit 1
+      ;;
+  esac
+done
+
+exit 0
