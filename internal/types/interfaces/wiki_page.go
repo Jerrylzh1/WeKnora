@@ -76,16 +76,6 @@ type WikiPageService interface {
 	// the consumer.
 	GetIndexView(ctx context.Context, kbID string, pageTypes []string, limit int, cursor string) (*types.WikiIndexResponse, error)
 
-	// GetLog returns the log page for a knowledge base.
-	//
-	// Wiki operation events now live in the dedicated wiki_log_entries
-	// table, so this method no longer auto-creates a placeholder row on
-	// miss and may legitimately return (nil, nil) for KBs that never had
-	// the legacy row written. Retained for back-compat with callers that
-	// still probe the row (lint, knowledge delete); new code should use
-	// WikiLogEntryService.List for the event feed instead.
-	GetLog(ctx context.Context, kbID string) (*types.WikiPage, error)
-
 	// GetGraph returns the link graph data for visualization. The caller
 	// supplies a WikiGraphRequest describing the desired slice of the graph
 	// (overview top-N or ego neighborhood around a center slug). Callers
@@ -107,7 +97,7 @@ type WikiPageService interface {
 	// RebuildIndexPage regenerates the index page.
 	RebuildIndexPage(ctx context.Context, kbID string) error
 
-	// ListAllPages retrieves all wiki pages in a knowledge base without pagination.
+	// ListAllPages retrieves all non-archived wiki pages in a knowledge base without pagination.
 	// Used for index rebuild, graph generation, cross-link injection, etc.
 	ListAllPages(ctx context.Context, kbID string) ([]*types.WikiPage, error)
 
@@ -364,13 +354,13 @@ type WikiPageRepository interface {
 	// Used to recompute cached paths when a folder subtree is moved/renamed.
 	ListPagesByFolderIDs(ctx context.Context, kbID string, folderIDs []string) ([]*types.WikiPage, error)
 
-	// ListAll retrieves all wiki pages in a knowledge base (for link rebuilding, graph generation).
+	// ListAll retrieves all non-archived wiki pages in a knowledge base (for link rebuilding, graph generation).
 	ListAll(ctx context.Context, kbID string) ([]*types.WikiPage, error)
 
 	// ListRecentForSuggestions returns recent user-visible wiki pages under the given
 	// knowledge bases, used to produce fallback suggested questions for Wiki-only KBs
 	// that do not have AI-generated document questions or recommended FAQ entries.
-	// Excludes index/log pages and archived pages. Returns up to `limit` rows sorted
+	// Excludes the index page and archived pages. Returns up to `limit` rows sorted
 	// by updated_at descending.
 	ListRecentForSuggestions(ctx context.Context, tenantID uint64, kbIDs []string, limit int) ([]*types.WikiPage, error)
 
