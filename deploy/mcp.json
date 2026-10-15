@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "weknora": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "D:/AI-plat-form/01-githubcode/WeKnora/mcp-server",
+        "run",
+        "run_server.py"
+      ],
+      "env": {
+        "WEKNORA_BASE_URL": "http://10.56.5.140/api/v1",
+        "WEKNORA_API_KEY": "在此粘贴你自己在 WeKnora 平台生成的 API Key"
+      }
+    }
+  }
+}

@@ -5191,7 +5191,7 @@ export default {
     }
   },
   createChat: {
-    title: 'Hi，我是北京公交知识库助手，让你的知识触手可及',
+    title: '您好，欢迎使用北京公交企业知识库',
     newSessionTitle: '新会话',
     openProject: '选择项目',
     clearProject: '取消绑定',
@@ -5485,7 +5485,7 @@ export default {
     firstTime: '首次使用',
     registerSuccess: '注册成功，请登录',
     registerFailed: '注册失败',
-    subtitle: 'RAG 问答、ReAct 智能体与 Wiki 知识库，大模型驱动的企业级知识框架',
+    subtitle: '',
     registerSubtitle: '创建账户并开始使用',
     emailPlaceholder: '输入邮箱地址',
     passwordPlaceholder: '输入密码',
