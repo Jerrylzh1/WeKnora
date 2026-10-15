@@ -71,6 +71,39 @@ func (r *resourceRepository) CreateBinding(ctx context.Context, binding *types.R
 	return r.db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(binding).Error
 }
 
+// DeleteBinding removes one owner's claim on a resource. Deleting a claim that
+// was never recorded is not an error: callers release optimistically, from a
+// content scan that cannot know which references were bound.
+func (r *resourceRepository) DeleteBinding(ctx context.Context, resourceID, ownerType, ownerID string) error {
+	return r.db.WithContext(ctx).
+		Where("resource_id = ? AND owner_type = ? AND owner_id = ?", resourceID, ownerType, ownerID).
+		Delete(&types.ResourceBinding{}).Error
+}
+
+func (r *resourceRepository) CountBindings(ctx context.Context, resourceID string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&types.ResourceBinding{}).
+		Where("resource_id = ?", resourceID).
+		Count(&count).Error
+	return count, err
+}
+
+func (r *resourceRepository) ListHandlesByOwner(
+	ctx context.Context, ownerType string, ownerIDs, relations []string,
+) ([]string, error) {
+	if ownerType == "" || len(ownerIDs) == 0 || len(relations) == 0 {
+		return nil, nil
+	}
+	var handles []string
+	err := r.db.WithContext(ctx).
+		Table("resource_bindings AS b").
+		Joins("JOIN resources AS r ON r.id = b.resource_id AND r.state = ?", types.ResourceStateActive).
+		Where("b.owner_type = ? AND b.owner_id IN ? AND b.relation IN ?", ownerType, ownerIDs, relations).
+		Distinct("r.handle").
+		Pluck("r.handle", &handles).Error
+	return handles, err
+}
+
 func (r *resourceRepository) CreateGrant(ctx context.Context, grant *types.ResourceAccessGrant) error {
 	return r.db.WithContext(ctx).Create(grant).Error
 }

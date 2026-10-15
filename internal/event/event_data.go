@@ -1,5 +1,10 @@
 package event
 
+import (
+	"encoding/json"
+	"time"
+)
+
 // EventData contains common event data structures for different stages
 
 // QueryData represents query-related event data
@@ -139,10 +144,15 @@ type AgentCompleteData struct {
 	FinalAnswer     string                 `json:"final_answer"`
 	KnowledgeRefs   []interface{}          `json:"knowledge_refs,omitempty"` // []*types.SearchResult
 	AgentSteps      interface{}            `json:"agent_steps,omitempty"`    // []types.AgentStep - detailed execution steps
+	Usage           interface{}            `json:"usage,omitempty"`          // *types.TokenUsage - LLM token usage aggregated over the turn
+	ModelID         string                 `json:"model_id,omitempty"`       // Chat model whose calls produced Usage
 	TotalDurationMs int64                  `json:"total_duration_ms"`
 	MessageID       string                 `json:"message_id,omitempty"` // Assistant message ID
 	RequestID       string                 `json:"request_id,omitempty"`
 	Extra           map[string]interface{} `json:"extra,omitempty"`
+	// Suspended is set (*types.PromptSuspension) when the run ended waiting
+	// on a user prompt; the message is then not complete.
+	Suspended interface{} `json:"suspended,omitempty"`
 }
 
 // === Streaming Event Data Structures ===
@@ -182,11 +192,54 @@ type AgentReferencesData struct {
 	Iteration  int         `json:"iteration"`
 }
 
+// MemoryRecalledData carries the long-term memories injected into this turn.
+// Memories is []types.UsedMemory, kept as interface{} for the same reason
+// AgentReferencesData does: the event package stays free of a types import.
+type MemoryRecalledData struct {
+	Memories interface{} `json:"memories"`
+}
+
 // AgentFinalAnswerData represents final answer streaming data
 type AgentFinalAnswerData struct {
 	Content    string `json:"content"`
 	Done       bool   `json:"done"`
 	IsFallback bool   `json:"is_fallback,omitempty"` // True when response is a fallback (no knowledge base match)
+	// Truncated marks an answer the provider cut off at the completion-token
+	// cap. The text is what the model had produced when the cap hit, not a
+	// finished answer, so a client should say so rather than present it as
+	// complete. Carried on both the content event and the Done marker,
+	// because a live-streamed answer only learns of the cap at the close.
+	Truncated bool `json:"truncated,omitempty"`
+}
+
+// ContextCompactedData reports that older conversation was replaced by a
+// summary. Compaction changes what the agent remembers, so it is shown rather
+// than hidden: an answer that forgets an earlier instruction is otherwise
+// indistinguishable from the model ignoring it.
+type ContextCompactedData struct {
+	Reason         string `json:"reason"` // threshold | overflow
+	Round          int    `json:"round"`
+	TokensBefore   int    `json:"tokens_before"`
+	TokensAfter    int    `json:"tokens_after"`
+	MessagesBefore int    `json:"messages_before"`
+	MessagesAfter  int    `json:"messages_after"`
+	Summary        string `json:"summary"`
+	// Degraded marks a summary that came from the mechanical archive because
+	// the summarizer failed.
+	Degraded bool `json:"degraded,omitempty"`
+	// SplitTurn marks a cut that landed inside a single turn.
+	SplitTurn bool `json:"split_turn,omitempty"`
+}
+
+// UserMessageInjectedData reports that a message the user appended while the
+// run was in flight was accepted into the running turn: a user-role row has
+// been persisted under the run's request ID and the text was appended to the
+// agent's message list, so the next LLM call already sees it.
+type UserMessageInjectedData struct {
+	SteerID       string `json:"steer_id"`   // Correlates with the queued steer event
+	Content       string `json:"content"`    // The injected text, as sent to the model
+	MessageID     string `json:"message_id"` // Durable assistant message of the run
+	UserMessageID string `json:"user_message_id,omitempty"`
 }
 
 // AgentReflectionData represents agent reflection data
@@ -224,9 +277,13 @@ type ToolApprovalRequiredData struct {
 	Args               interface{} `json:"args,omitempty"`
 	ArgsJSON           string      `json:"args_json,omitempty"`
 	TimeoutSeconds     int         `json:"timeout_seconds"`
-	RequestedAtUnix    int64       `json:"requested_at"`
-	ToolCallID         string      `json:"tool_call_id"`
-	RequestID          string      `json:"request_id,omitempty"`
+	// HotWaitSeconds equals TimeoutSeconds; when Suspendable, the run is
+	// suspended rather than rejected once it elapses.
+	HotWaitSeconds  int    `json:"hot_wait_seconds"`
+	Suspendable     bool   `json:"suspendable"`
+	RequestedAtUnix int64  `json:"requested_at"`
+	ToolCallID      string `json:"tool_call_id"`
+	RequestID       string `json:"request_id,omitempty"`
 }
 
 // ToolApprovalResolvedData confirms the user decision (or timeout/cancel).
@@ -236,6 +293,34 @@ type ToolApprovalResolvedData struct {
 	Reason    string `json:"reason,omitempty"`
 	TimedOut  bool   `json:"timed_out,omitempty"`
 	Canceled  bool   `json:"canceled,omitempty"`
+}
+
+// AgentPromptRequiredData asks the user a question of the given kind.
+// Request is the kind's request JSON, e.g. types.AskUserPromptRequest.
+type AgentPromptRequiredData struct {
+	PendingID          string          `json:"pending_id"`
+	Kind               string          `json:"kind"`
+	SessionID          string          `json:"session_id"`
+	AssistantMessageID string          `json:"assistant_message_id"`
+	Request            json.RawMessage `json:"request"`
+	TimeoutSeconds     int             `json:"timeout_seconds"`
+	HotWaitSeconds     int             `json:"hot_wait_seconds"`
+	Suspendable        bool            `json:"suspendable"`
+	RequestedAtUnix    int64           `json:"requested_at"`
+	ToolCallID         string          `json:"tool_call_id"`
+	RequestID          string          `json:"request_id,omitempty"`
+}
+
+// AgentPromptResolvedData reports how a prompt ended. Response is the
+// answer JSON when Answered.
+type AgentPromptResolvedData struct {
+	PendingID string          `json:"pending_id"`
+	Kind      string          `json:"kind"`
+	Answered  bool            `json:"answered"`
+	Response  json.RawMessage `json:"response,omitempty"`
+	Reason    string          `json:"reason,omitempty"`
+	TimedOut  bool            `json:"timed_out,omitempty"`
+	Canceled  bool            `json:"canceled,omitempty"`
 }
 
 // MCPOAuthRequiredData is emitted when an OAuth-enabled MCP service is invoked
@@ -264,4 +349,14 @@ type MCPOAuthResolvedData struct {
 	Reason     string `json:"reason,omitempty"`
 	TimedOut   bool   `json:"timed_out,omitempty"`
 	Canceled   bool   `json:"canceled,omitempty"`
+}
+
+// CommandOutputData is a cumulative tail, so reconnect/replay needs no
+// byte offsets and a missed update does not corrupt the displayed log.
+type CommandOutputData struct {
+	ToolCallID string    `json:"tool_call_id"`
+	Command    string    `json:"command"`
+	StartedAt  time.Time `json:"started_at"`
+	Output     string    `json:"output"`
+	Done       bool      `json:"done"`
 }

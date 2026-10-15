@@ -22,12 +22,17 @@ func RegisterModelRoutes(
 	{
 		// 获取模型厂商列表 — Viewer+
 		models.GET("/providers", g.Viewer(), handler.ListModelProviders)
+		// 解析模型的有效接入配置（协议 / 思考等级 / 上下文）— Viewer+
+		models.GET("/catalog/resolve", g.Viewer(), handler.ResolveModelCatalog)
+		models.POST("/catalog/resolve", g.Viewer(), handler.ResolveModelCatalog)
 		// 创建模型 — Admin+
 		models.POST("", g.Admin(), handler.CreateModel)
 		// 获取模型列表 — Viewer+
 		models.GET("", g.Viewer(), handler.ListModels)
 		// 调试已保存模型会发起真实上游调用并产生费用 — Admin+
 		models.POST("/:id/debug", g.Admin(), handler.DebugModel)
+		// 复制模型配置（含已存凭证）— Admin+
+		models.POST("/:id/copy", g.Admin(), handler.CopyModel)
 		// 获取单个模型 — Viewer+
 		models.GET("/:id", g.Viewer(), handler.GetModel)
 		// 更新模型 — Admin+；内置模型仍由服务层额外限定为 SystemAdmin。
@@ -46,6 +51,7 @@ func RegisterModelRoutes(
 func RegisterSandboxConfigRoutes(
 	r *gin.RouterGroup,
 	h *handler.SandboxConfigHandler,
+	skills *handler.SandboxSkillHandler,
 	g *rbacGuards,
 ) {
 	configs := g.apiKeyGroup(r.Group("/sandbox-configs"), apiKeyFullAccess())
@@ -58,6 +64,22 @@ func RegisterSandboxConfigRoutes(
 		configs.PUT("/:id", g.Admin(), h.Update)
 		configs.DELETE("/:id", g.Admin(), h.Delete)
 		configs.GET("/:id/sandboxes", g.Admin(), h.Inventory)
+		// Skills are Admin+ throughout, reads included: an upload drives a
+		// root shell whose output is baked into the image every session of
+		// this config boots, and the listing names what that image carries.
+		configs.GET("/:id/skills", g.Admin(), skills.List)
+		configs.POST("/:id/skills", g.Admin(), skills.Upload)
+		configs.GET("/:id/skills/:skillId", g.Admin(), skills.Get)
+		configs.GET("/:id/skills/:skillId/files", g.Admin(), skills.ListFiles)
+		configs.GET("/:id/skills/:skillId/files/content", g.Admin(), skills.GetFile)
+		configs.POST("/:id/skills/:skillId/reinstall", g.Admin(), skills.Reinstall)
+		configs.GET("/:id/skills/:skillId/guidance", g.Admin(), skills.InstallGuidance)
+		configs.POST("/:id/skills/:skillId/guidance", g.Admin(), skills.SteerInstall)
+		configs.POST("/:id/skills/:skillId/stop", g.Admin(), skills.Stop)
+		configs.PATCH("/:id/skills/:skillId", g.Admin(), skills.Patch)
+		configs.DELETE("/:id/skills/:skillId", g.Admin(), skills.Delete)
+		configs.GET("/:id/skills/:skillId/install-events", g.Admin(), skills.InstallEvents)
+		configs.GET("/:id/skills/:skillId/transcript", g.Admin(), skills.InstallTranscript)
 	}
 }
 
@@ -145,6 +167,12 @@ func RegisterMCPServiceRoutes(
 		mcpServices.POST("/:id/test", g.Admin(), handler.TestMCPService)
 		// Get MCP service tools — Viewer+
 		mcpServices.GET("/:id/tools", g.Viewer(), handler.GetMCPServiceTools)
+		mcpServices.GET("/:id/metadata", g.Viewer(), handler.GetMCPMetadata)
+		// Refresh writes a principal-scoped OAuth snapshot for the caller
+		// (Viewer+), or a tenant-wide snapshot for static auth (Admin+ in the
+		// handler). GET /tools remains Viewer+ and does not persist.
+		mcpServices.POST("/:id/metadata/refresh", g.Viewer(), handler.RefreshMCPMetadata)
+		mcpServices.POST("/:id/usage-instructions/generate", g.Admin(), handler.GenerateMCPUsageInstructions)
 		// Get MCP service resources — Viewer+
 		mcpServices.GET("/:id/resources", g.Viewer(), handler.GetMCPServiceResources)
 		// Per-field credential subresource: secrets never travel via the main
@@ -154,10 +182,11 @@ func RegisterMCPServiceRoutes(
 		// MCP tool human approval (issue #1173) — Viewer+ to read, Admin+ to set policy
 		mcpServices.GET("/:id/tool-approvals", g.Viewer(), handler.ListMCPToolApprovals)
 		mcpServices.PUT("/:id/tool-approvals/:tool_name", g.Admin(), handler.SetMCPToolApproval)
-		// Per-user OAuth authorization flow. Viewer+ may authorize/inspect/
-		// revoke their own token; the callback is the separate public route
-		// registered above.
+		// Per-user OAuth authorization. Viewer+ may authorize/inspect/revoke
+		// their own token, through the browser flow (authorize-url and the
+		// public callback registered above) or with an assertion.
 		mcpServices.POST("/:id/oauth/authorize-url", g.Viewer(), oauthHandler.AuthorizeURL)
+		mcpServices.POST("/:id/oauth/assertion", g.Viewer(), oauthHandler.AssertionGrant)
 		mcpServices.GET("/:id/oauth/status", g.Viewer(), oauthHandler.Status)
 		mcpServices.DELETE("/:id/oauth/token", g.Viewer(), oauthHandler.Revoke)
 	}
@@ -172,6 +201,8 @@ func RegisterMCPServiceRoutes(
 		// people who actually have context to approve, so the gate is
 		// kept at "anyone in the tenant" instead.
 		agentTool.POST("/tool-approvals/:pending_id", g.Viewer(), handler.ResolveToolApproval)
+		// Answer any user-answerable prompt (ask_user, tool approval); same gating.
+		agentTool.POST("/prompts/:prompt_id", g.Viewer(), handler.ResolveAgentPrompt)
 		// Resume an agent run paused on an in-conversation MCP OAuth prompt.
 		// Same tenant-member (Viewer+) gating rationale as tool-approvals.
 		agentTool.POST("/mcp-oauth-resolutions/:pending_id", g.Viewer(), oauthHandler.ResolveMCPOAuth)

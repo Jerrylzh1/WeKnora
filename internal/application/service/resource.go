@@ -155,6 +155,106 @@ func (s *resourceCatalog) Bind(ctx context.Context, reference, ownerType, ownerI
 	})
 }
 
+func (s *resourceCatalog) IsReferencedByKnowledgeBase(
+	ctx context.Context,
+	tenantID uint64,
+	kbID, reference string,
+) (bool, error) {
+	physical, resource, err := s.ResolvePath(ctx, reference)
+	if err != nil {
+		return false, err
+	}
+	if resource == nil {
+		resource, err = s.repo.GetByTenantLocation(ctx, tenantID, resourceLocationHash(physical))
+		if err != nil {
+			return false, err
+		}
+	}
+	if resource == nil || resource.TenantID != tenantID {
+		return false, nil
+	}
+	return s.repo.IsReferencedByKnowledgeBase(ctx, tenantID, kbID, resource.ID)
+}
+
+// GetMessageFileBindings resolves registered aliases before reading authoritative origins.
+func (s *resourceCatalog) GetMessageFileBindings(
+	ctx context.Context, tenantID uint64, reference, messageID string,
+) (*types.MessageFileBindings, error) {
+	physical, resource, err := s.ResolvePath(ctx, reference)
+	if err != nil {
+		return nil, err
+	}
+	if resource == nil {
+		resource, err = s.repo.GetByTenantLocation(ctx, tenantID, resourceLocationHash(physical))
+		if err != nil {
+			return nil, err
+		}
+	}
+	if resource == nil || resource.TenantID != tenantID {
+		return &types.MessageFileBindings{}, nil
+	}
+	return s.repo.GetMessageFileBindings(ctx, tenantID, resource.ID, messageID)
+}
+
+// Release implements interfaces.ResourceCatalog.
+//
+// Unbinding and counting are deliberately not a single transaction. A racing
+// bind that lands between them makes the count too high, which keeps a live
+// file — the safe direction. The opposite ordering could delete bytes another
+// owner had just claimed.
+func (s *resourceCatalog) Release(
+	ctx context.Context, reference, ownerType, ownerID string,
+) (int64, error) {
+	if strings.TrimSpace(ownerType) == "" || strings.TrimSpace(ownerID) == "" {
+		return -1, fmt.Errorf("resource release requires owner type and id")
+	}
+	if _, ok := types.ParseResourcePath(reference); !ok {
+		// A raw provider path predates the catalog and has no bindings to
+		// account for; the caller keeps its previous delete behaviour.
+		return -1, nil
+	}
+	resource, err := s.Resolve(ctx, reference)
+	if err != nil {
+		return -1, err
+	}
+	if err := s.repo.DeleteBinding(ctx, resource.ID, ownerType, ownerID); err != nil {
+		return -1, err
+	}
+	return s.repo.CountBindings(ctx, resource.ID)
+}
+
+func (s *resourceCatalog) ListReferencesByOwner(
+	ctx context.Context, ownerType string, ownerIDs ...string,
+) ([]string, error) {
+	ids := make([]string, 0, len(ownerIDs))
+	for _, id := range ownerIDs {
+		if strings.TrimSpace(id) != "" {
+			ids = append(ids, id)
+		}
+	}
+	if strings.TrimSpace(ownerType) == "" || len(ids) == 0 {
+		return nil, nil
+	}
+	handles, err := s.repo.ListHandlesByOwner(ctx, ownerType, ids, []string{
+		types.ResourceRelationAttachment,
+		types.ResourceRelationExtractedImage,
+	})
+	if err != nil {
+		return nil, err
+	}
+	refs := make([]string, 0, len(handles))
+	seen := make(map[string]struct{}, len(handles))
+	for _, handle := range handles {
+		ref := types.BuildResourcePath(handle)
+		if _, exists := seen[ref]; exists {
+			continue
+		}
+		seen[ref] = struct{}{}
+		refs = append(refs, ref)
+	}
+	return refs, nil
+}
+
 func (s *resourceCatalog) MarkDeleted(ctx context.Context, reference string) error {
 	resource, err := s.Resolve(ctx, reference)
 	if err != nil {

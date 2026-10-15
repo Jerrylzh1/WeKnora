@@ -11,18 +11,22 @@ import { onMounted, ref, nextTick, onUnmounted, watch, computed } from "vue";
 import {
   downKnowledgeDetails, deleteGeneratedQuestion, getChunkByIdOnly, previewKnowledgeFile,
   updateDocumentChunk, listChunkRevisions, revertDocumentChunk, updateKnowledgeMetadata,
-  regenerateKnowledgeSummary, upsertGeneratedQuestion, regenerateGeneratedQuestions, getKnowledgeDetails,
+  updateKnowledgeSummary, regenerateKnowledgeSummary, upsertGeneratedQuestion, regenerateGeneratedQuestions, getKnowledgeDetails,
+  KNOWLEDGE_CHUNK_PAGE_SIZE,
 } from "@/api/knowledge-base/index";
 import { MessagePlugin } from "tdesign-vue-next";
 import { sanitizeHTML, safeMarkdownToHTML, createSafeImage, isValidImageURL, hydrateProtectedFileImages, isValidURL } from '@/utils/security';
 import { normalizeSpuriousTablePrefixes } from '@/utils/markdownTableNormalize';
+import { ensureLiteralSingleTildeOnGlobalMarked } from '@/utils/markedLiteralTilde';
 import { openMermaidFullscreen } from '@/utils/mermaidViewer';
 import { diffWikiLines, type WikiDiffLine } from '@/utils/wikiLineDiff';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '@/stores/auth';
 import DocumentPreview from '@/components/document-preview.vue';
+import DocumentFileIcon from '@/views/knowledge/components/DocumentFileIcon.vue';
 import KnowledgeProcessingTimeline from '@/components/knowledge-processing-timeline.vue';
 import { resolveKnowledgeDownloadFileName } from '@/views/knowledge/knowledgeDownloadFileName';
+import { isKnownPreviewableExt, resolveFilePreviewExt } from '@/utils/filePreview';
 
 const { t } = useI18n();
 const authStore = useAuthStore();
@@ -51,6 +55,34 @@ const metadataEditing = ref(false);
 const metadataDraft = ref<MetadataDraftRow[]>([]);
 const metadataSaving = ref(false);
 const summaryRefreshing = ref(false);
+const summaryEditing = ref(false);
+const summaryDraft = ref('');
+const summarySaving = ref(false);
+
+const startSummaryEdit = () => {
+  summaryDraft.value = props.details?.description || '';
+  summaryEditing.value = true;
+};
+
+const cancelSummaryEdit = () => {
+  summaryEditing.value = false;
+  summaryDraft.value = '';
+};
+
+const saveSummary = async () => {
+  summarySaving.value = true;
+  try {
+    const description = summaryDraft.value.trim();
+    const result: any = await updateKnowledgeSummary(props.details.id, description);
+    applySummaryState(result?.data?.summary_status, result?.data?.description ?? description);
+    summaryEditing.value = false;
+    MessagePlugin.success(t('common.saveSuccess'));
+  } catch (error: any) {
+    MessagePlugin.error(error?.message || t('common.saveFailed'));
+  } finally {
+    summarySaving.value = false;
+  }
+};
 
 const metadataTypeOptions = computed(() => [
   { label: t('knowledgeBase.metadataTypeText'), value: 'text' },
@@ -162,15 +194,11 @@ const detailTags = computed(() => {
   return Array.isArray(tags) ? tags : [];
 });
 
-const headerIconName = computed(() => {
-  switch (props.details?.type) {
-    case 'url':
-      return 'link';
-    case 'manual':
-      return 'edit';
-    default:
-      return 'file';
-  }
+const headerIconFileName = computed(() => {
+  const detail = props.details;
+  return detail?.file_type
+    ? `document.${detail.file_type.toLowerCase()}`
+    : detail?.original_file_name || detail?.file_name || detail?.title || '';
 });
 
 const showSummarySection = computed(() =>
@@ -232,6 +260,7 @@ const applySummaryState = (summaryStatus?: string, description?: string) => {
 
 const isSummaryStatusInFlight = (status?: string) => status === 'pending' || status === 'processing';
 const summaryStatusRefreshing = computed(() => isSummaryStatusInFlight(props.details?.summary_status));
+const canEditSummary = computed(() => canEditContent.value && !summaryStatusRefreshing.value);
 let summaryStatusPollTimer: ReturnType<typeof setTimeout> | null = null;
 let summaryStatusPollGeneration = 0;
 
@@ -486,6 +515,7 @@ marked.use({
   gfm: true,         // 启用 GitHub Flavored Markdown
 });
 marked.use(markedKatex({ throwOnError: false, nonStandard: true }));
+ensureLiteralSingleTildeOnGlobalMarked();
 
 const preprocessMathDelimiters = (rawText: string): string => {
   if (!rawText || typeof rawText !== 'string') {
@@ -496,13 +526,13 @@ const preprocessMathDelimiters = (rawText: string): string => {
     .replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$$');
 };
 const renderer = new marked.Renderer();
-let page = 1;
-let loadingChunks = false;
-let pendingRequestedPage: number | null = null;
-let pendingChunksBeforeLoad = 0;
-const CHUNK_PAGE_SIZE = 25;
-/** Scroll container for the main doc drawer (not the first .t-drawer__body on the page). */
-let docScrollEl: HTMLElement | null = null;
+const CHUNK_PAGE_SIZE = KNOWLEDGE_CHUNK_PAGE_SIZE;
+const chunkPage = ref(1);
+const loadedChunkPage = ref(1);
+let pendingChunkPage: number | null = null;
+const isChunkPageTransition = computed(
+  () => Boolean(props.details?.chunkLoading) && chunkPage.value !== loadedChunkPage.value,
+);
 let mdContentWrap = ref()
 // Drawer uses attach="body", so markdown nodes live outside mdContentWrap in the DOM.
 const docMarkdownRoot = ref<HTMLElement | null>(null)
@@ -526,11 +556,17 @@ const viewMode = ref<'chunks' | 'merged' | 'preview'>('merged');
  *  2. HTML 实体编码（&#34; 等）导致的 content 长度与原文区间不一致——比对的是
  *     文本本身，不受长度偏差影响。
  *
+ * positionOverlap <= 0 时两段位置上严格相邻或不相交，无可去重重叠；此时进入
+ * 文本匹配会因 headSlack 下限 320 在 next 开头窗口内误命中 acc 后缀的真实
+ * 内容重复（如同一句话在文档多次出现），把 next 开头整段误判为补写表头删掉，
+ * 造成不可逆的内容丢失。直接拼接，补写表头重复交给调用方后处理。
+ *
  * @param positionOverlap 由 start/end 估算的重叠量，仅用于界定搜索窗口大小。
  */
 const appendChunkContent = (acc: string, next: string, positionOverlap: number): string => {
   if (!acc) return next;
   if (!next) return acc;
+  if (positionOverlap <= 0) return acc + next;
 
   const MIN_OVERLAP = 12;          // 过短的后缀容易误匹配（如分隔行），忽略
   const span = Math.max(positionOverlap, 0);
@@ -589,62 +625,27 @@ const mergeChunks = (chunks: any[]): string => {
   return merged;
 };
 
-const findDocDrawerScrollEl = (): HTMLElement | null =>
-  document.querySelector('.doc-main-drawer .t-drawer__body') as HTMLElement | null;
-
-const unbindDrawerScroll = () => {
-  if (docScrollEl) {
-    docScrollEl.removeEventListener('scroll', handleDetailsScroll);
-    docScrollEl = null;
-  }
-};
-
-const bindDrawerScroll = () => {
-  unbindDrawerScroll();
-  docScrollEl = findDocDrawerScrollEl();
-  if (docScrollEl) {
-    docScrollEl.addEventListener('scroll', handleDetailsScroll, { passive: true });
-  }
-};
-
 onMounted(() => {
   loadTraceDrawerWidth();
   loadMainDrawerWidth();
   window.addEventListener('resize', onTraceDrawerWindowResize, { passive: true });
 });
 
-watch(() => props.visible, (visible) => {
-  if (visible) {
-    nextTick(() => {
-      bindDrawerScroll();
-      maybeLoadMoreChunks();
-    });
-  } else {
-    unbindDrawerScroll();
-  }
-});
 watch(() => props.details?.id, () => {
-  page = 1;
-  loadingChunks = false;
-  pendingRequestedPage = null;
-  pendingChunksBeforeLoad = 0;
+  cancelSummaryEdit();
+  chunkPage.value = 1;
+  loadedChunkPage.value = 1;
+  pendingChunkPage = null;
 });
 watch(() => props.details?.chunkLoading, (val) => {
-  if (val === false) {
-    if (pendingRequestedPage !== null) {
-      const currentLength = props.details?.md?.length || 0;
-      const hasError = Boolean(props.details?.chunkLoadError);
-      if (hasError && currentLength <= pendingChunksBeforeLoad) {
-        page = Math.max(1, pendingRequestedPage - 1);
-        MessagePlugin.warning(props.details?.chunkLoadError);
-      }
+  if (val === false && pendingChunkPage !== null) {
+    if (props.details?.chunkLoadError) {
+      chunkPage.value = loadedChunkPage.value;
+      MessagePlugin.warning(props.details.chunkLoadError);
+    } else {
+      loadedChunkPage.value = pendingChunkPage;
     }
-    pendingRequestedPage = null;
-    pendingChunksBeforeLoad = 0;
-    loadingChunks = false;
-    if (props.visible) {
-      nextTick(() => maybeLoadMoreChunks());
-    }
+    pendingChunkPage = null;
   }
 });
 onUnmounted(() => {
@@ -652,7 +653,6 @@ onUnmounted(() => {
   window.removeEventListener('resize', onTraceDrawerWindowResize);
   cleanupTraceDrawerResize();
   cleanupMainDrawerResize();
-  unbindDrawerScroll();
   if (audioBlobUrl.value) {
     URL.revokeObjectURL(audioBlobUrl.value);
   }
@@ -739,22 +739,12 @@ const processedChunks = computed(() => {
   });
 });
 
-const previewSupportedTypes = new Set([
-  'pdf', 'docx', 'pptx', 'ppt', 'xlsx', 'xls', 'csv',
-  'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'svg',
-  'txt', 'md', 'markdown', 'json', 'xml', 'html', 'css', 'js', 'ts',
-  'py', 'java', 'go', 'cpp', 'c', 'h', 'sh', 'yaml', 'yml',
-  'ini', 'conf', 'log', 'sql', 'rs', 'rb', 'php', 'swift', 'kt',
-  'scala', 'r', 'lua', 'pl', 'toml',
-  'mp3', 'wav', 'm4a', 'flac', 'ogg',
-]);
-
 const canPreview = (): boolean => {
   if (props.details?.type !== 'file') return false;
-  const ft = props.details?.file_type?.toLowerCase();
+  const ft = resolveFilePreviewExt(props.details?.title, props.details?.file_type);
   if (!ft) return false;
   if (audioExtensions.has(ft)) return false; // 音频不走预览tab，播放器已内嵌
-  return previewSupportedTypes.has(ft);
+  return isKnownPreviewableExt(ft);
 };
 
 // 当文档详情加载完成时，file 类型自动切换到「预览」；音频类型使用 merged + 播放器
@@ -837,17 +827,22 @@ watch(() => props.details.md, () => {
 watch(() => viewMode.value, (mode) => {
   if ((mode === 'chunks' || mode === 'merged') && props.visible) {
     runMarkdownPostRenderPipeline();
-    if (mode === 'chunks') {
-      nextTick(() => maybeLoadMoreChunks());
-    }
   }
 }, { flush: 'post' });
 
 watch(() => props.visible, (visible) => {
-  if (visible && (viewMode.value === 'chunks' || viewMode.value === 'merged')) {
+  if (!visible) {
+    cancelSummaryEdit();
+  } else if (viewMode.value === 'chunks' || viewMode.value === 'merged') {
     runMarkdownPostRenderPipeline();
   }
 }, { flush: 'post' });
+
+watch(summaryStatusRefreshing, (refreshing) => {
+  if (refreshing) {
+    cancelSummaryEdit();
+  }
+});
 
 // 渲染 Mermaid 图表的函数
 const renderMermaidDiagrams = async () => {
@@ -931,8 +926,10 @@ const processMarkdown = (markdownText) => {
   const safeMarkdown = safeMarkdownToHTML(mathSafeText);
 
   // 使用标记渲染
-  marked.use({ renderer });
-  let html = marked.parse(safeMarkdown) as string;
+  // Do not register this renderer globally. DocumentPreview uses the same
+  // `marked` module; registering here made its later Markdown preview reuse
+  // this image validator after the user had opened the chunk view.
+  let html = marked.parse(safeMarkdown, { renderer }) as string;
 
   // 还原被转义的 <br>
   html = html.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
@@ -944,7 +941,7 @@ const processMarkdown = (markdownText) => {
 };
 const handleClose = () => {
   emit("closeDoc", false);
-  const scrollEl = docScrollEl || findDocDrawerScrollEl();
+  const scrollEl = document.querySelector('.doc-main-drawer .t-drawer__body') as HTMLElement | null;
   if (scrollEl) scrollEl.scrollTop = 0;
   viewMode.value = 'merged';
 };
@@ -968,6 +965,9 @@ const channelLabelMap: Record<string, string> = {
   wechat: 'knowledgeBase.channelWechat',
   wecom: 'knowledgeBase.channelWecom',
   feishu: 'knowledgeBase.channelFeishu',
+  gitlab: 'knowledgeBase.channelGitLab',
+  seafile: 'knowledgeBase.channelSeafile',
+  confluence: 'knowledgeBase.channelConfluence',
   // Drive (云盘) connectors get their own channel so Drive docs show
   // "飞书云盘" / "Lark 云盘", distinct from the wiki connector's "飞书".
   feishu_drive: 'knowledgeBase.channelFeishuDrive',
@@ -975,6 +975,7 @@ const channelLabelMap: Record<string, string> = {
   dingtalk: 'knowledgeBase.channelDingtalk',
   slack: 'knowledgeBase.channelSlack',
   im: 'knowledgeBase.channelIm',
+  ima: 'knowledgeBase.channelIma',
 };
 
 const getChannelLabel = (channel: string) => {
@@ -1134,10 +1135,8 @@ const notifyChunkMutationOutcome = (item: any, result: any, successMessage?: str
 };
 
 const reloadChunksFromStart = () => {
-  page = 1;
-  loadingChunks = true;
-  pendingRequestedPage = 1;
-  pendingChunksBeforeLoad = 0;
+  chunkPage.value = 1;
+  pendingChunkPage = 1;
   editingChunkId.value = '';
   chunkDraft.value = '';
   emit('getDoc', 1);
@@ -1564,43 +1563,12 @@ const downloadFile = () => {
       MessagePlugin.error(t('file.downloadFailed'));
     });
 };
-const requestNextChunkPage = () => {
-  if (loadingChunks || props.details?.chunkLoading) return;
-  const total = props.details?.total ?? 0;
-  const loaded = props.details?.md?.length ?? 0;
-  if (loaded >= total || total === 0) return;
-  const pageNum = Math.ceil(total / CHUNK_PAGE_SIZE);
-  if (page + 1 > pageNum) return;
-  page++;
-  loadingChunks = true;
-  pendingRequestedPage = page;
-  pendingChunksBeforeLoad = loaded;
-  emit('getDoc', page);
+const handleChunkPageChange = (pageInfo: { current: number }) => {
+  if (props.details?.chunkLoading || pageInfo.current === loadedChunkPage.value) return;
+  pendingChunkPage = pageInfo.current;
+  emit('getDoc', pageInfo.current);
 };
 
-/** When the list is shorter than the drawer, scroll never fires — prefetch until scrollable or done. */
-const maybeLoadMoreChunks = () => {
-  if (!props.visible || loadingChunks || props.details?.chunkLoading) return;
-  const el = docScrollEl || findDocDrawerScrollEl();
-  if (!el) return;
-  const loaded = props.details?.md?.length ?? 0;
-  const total = props.details?.total ?? 0;
-  if (loaded >= total) return;
-  const { scrollHeight, clientHeight } = el;
-  if (scrollHeight <= clientHeight + 8) {
-    requestNextChunkPage();
-  }
-};
-
-const handleDetailsScroll = () => {
-  if (loadingChunks || props.details?.chunkLoading) return;
-  const el = docScrollEl || findDocDrawerScrollEl();
-  if (!el) return;
-  const { scrollTop, scrollHeight, clientHeight } = el;
-  if (scrollTop + clientHeight >= scrollHeight - 8) {
-    requestNextChunkPage();
-  }
-};
 </script>
 <template>
   <div class="doc_content" ref="mdContentWrap">
@@ -1616,7 +1584,7 @@ const handleDetailsScroll = () => {
       <template #header>
         <div class="doc-drawer-header">
           <div class="doc-drawer-header-icon">
-            <t-icon :name="headerIconName" />
+            <DocumentFileIcon :source-type="details.type" :file-name="headerIconFileName" />
           </div>
           <div class="doc-drawer-header-text">
             <div class="doc-drawer-header-title">{{ getDisplayTitle() }}</div>
@@ -1788,14 +1756,34 @@ const handleDetailsScroll = () => {
                 <span>{{ $t('knowledgeBase.generatingSummary') }}</span>
               </span>
             </div>
-            <t-tooltip v-if="canEditContent" :content="$t('knowledgeBase.regenerateSummary')" placement="top">
-              <t-button class="icon-action-btn" size="small" variant="text" shape="square"
-                :loading="summaryRefreshing" @click="refreshSummary">
-                <template #icon><t-icon name="refresh" size="15px" /></template>
-              </t-button>
-            </t-tooltip>
+            <div v-if="canEditContent && !summaryEditing" class="summary-title-actions">
+              <t-tooltip v-if="canEditSummary" :content="$t('common.edit')" placement="top">
+                <t-button class="icon-action-btn" size="small" variant="text" shape="square"
+                  @click="startSummaryEdit">
+                  <template #icon><t-icon name="edit" size="15px" /></template>
+                </t-button>
+              </t-tooltip>
+              <t-tooltip :content="$t('knowledgeBase.regenerateSummary')" placement="top">
+                <t-button class="icon-action-btn" size="small" variant="text" shape="square"
+                  :loading="summaryRefreshing" @click="refreshSummary">
+                  <template #icon><t-icon name="refresh" size="15px" /></template>
+                </t-button>
+              </t-tooltip>
+            </div>
           </div>
-          <div v-if="details.description" class="summary_wrapper"
+          <div v-if="summaryEditing" class="summary_editor">
+            <t-textarea v-model="summaryDraft" :autosize="{ minRows: 4, maxRows: 10 }"
+              :placeholder="$t('knowledgeBase.noDocumentSummary')" />
+            <div class="summary_editor_actions">
+              <t-button size="small" variant="outline" :disabled="summarySaving" @click="cancelSummaryEdit">
+                {{ $t('common.cancel') }}
+              </t-button>
+              <t-button size="small" theme="primary" :loading="summarySaving" @click="saveSummary">
+                {{ $t('common.save') }}
+              </t-button>
+            </div>
+          </div>
+          <div v-else-if="details.description" class="summary_wrapper"
             :class="{ 'summary_clickable': summaryOverflow || summaryExpanded }"
             @click="(summaryOverflow || summaryExpanded) && (summaryExpanded = !summaryExpanded)">
             <div ref="summaryRef" :class="['summary_content', { 'summary_collapsed': !summaryExpanded }]">{{
@@ -1862,19 +1850,30 @@ const handleDetailsScroll = () => {
 
           <!-- 合并视图 -->
           <div v-if="viewMode === 'merged'">
-            <div v-if="!mergedContent" class="no_content">{{ $t('common.noData') }}</div>
-            <div v-else class="md-content" v-html="processMarkdown(mergedContent)"></div>
+            <div v-if="isChunkPageTransition" class="chunk-page-loading">
+              <t-loading size="small" />
+              <span>{{ $t('common.loading') }}</span>
+            </div>
+            <template v-else>
+              <div v-if="!mergedContent" class="no_content">{{ $t('common.noData') }}</div>
+              <div v-else class="md-content" v-html="processMarkdown(mergedContent)"></div>
+            </template>
           </div>
 
           <!-- 分块视图 -->
           <div v-else-if="viewMode === 'chunks'">
-            <div v-if="!processedChunks.length" class="no_content">{{ $t('common.noData') }}</div>
-            <div v-else class="chunk-list">
+            <div v-if="isChunkPageTransition" class="chunk-page-loading">
+              <t-loading size="small" />
+              <span>{{ $t('common.loading') }}</span>
+            </div>
+            <template v-else>
+              <div v-if="!processedChunks.length" class="no_content">{{ $t('common.noData') }}</div>
+              <div v-else class="chunk-list">
               <div class="chunk-item" :class="{ 'chunk-item--disabled': !chunk.original.is_enabled }"
                 v-for="(chunk, index) in processedChunks" :key="chunk.original.id || index">
                 <div class="chunk-header">
                   <div class="chunk-heading">
-                    <span class="chunk-index">{{ $t('knowledgeBase.segment') }} {{ index + 1 }}</span>
+                    <span class="chunk-index">{{ $t('knowledgeBase.segment') }} {{ (loadedChunkPage - 1) * CHUNK_PAGE_SIZE + index + 1 }}</span>
                     <span class="chunk-meta">{{ chunk.meta }}</span>
                   </div>
                   <div class="chunk-header-right">
@@ -1986,6 +1985,7 @@ const handleDetailsScroll = () => {
                                     </t-tooltip>
                                     <t-popconfirm v-if="canDeleteGeneratedQuestion && !question.id.startsWith('legacy-')"
                                       theme="warning" :content="$t('knowledgeBase.confirmDeleteQuestion')"
+                                      :confirm-btn="{ content: $t('common.delete'), theme: 'danger' }"
                                       @confirm="handleDeleteQuestion(chunk.original, index, question)">
                                       <t-button class="icon-action-btn delete-question-btn" theme="default" variant="text"
                                         shape="square" size="small" :loading="isDeleting(index, question.id)">
@@ -2121,9 +2121,17 @@ const handleDetailsScroll = () => {
 
               </div>
             </div>
+            </template>
           </div>
 
           <!-- 文档预览视图 -->
+          <div v-if="(viewMode === 'merged' || viewMode === 'chunks') && details.total > CHUNK_PAGE_SIZE"
+            class="chunk-pagination">
+            <t-pagination v-model="chunkPage" :total="details.total" :page-size="CHUNK_PAGE_SIZE" size="small"
+              show-jumper show-page-number :show-page-size="false" :disabled="details.chunkLoading"
+              @change="handleChunkPageChange" />
+          </div>
+
           <div v-else-if="viewMode === 'preview'">
             <DocumentPreview :knowledgeId="details.id" :fileType="details.file_type" :fileName="details.title"
               :active="viewMode === 'preview'" />
@@ -2150,13 +2158,30 @@ const handleDetailsScroll = () => {
 .metadata-actions, .chunk-editor-actions { margin-top: 8px; justify-content: flex-end; }
 .chunk-disabled { opacity: .5; }
 
+.chunk-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--td-component-stroke);
+}
+
+.chunk-page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 120px;
+  color: var(--td-text-color-secondary);
+}
+
 .icon-action-btn {
   width: 28px;
   min-width: 28px;
   height: 28px;
   padding: 0;
   color: var(--td-text-color-secondary);
-  border-radius: 4px;
+  border-radius: var(--app-radius-xs);
 
   &:hover,
   &.is-active {
@@ -2176,7 +2201,7 @@ const handleDetailsScroll = () => {
 :deep(.code-block-wrapper) {
   margin: 12px 0;
   border: 1px solid var(--td-component-border);
-  border-radius: 6px;
+  border-radius: var(--app-radius-sm);
   background: var(--td-bg-color-container);
   overflow: hidden;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -2187,7 +2212,7 @@ const handleDetailsScroll = () => {
     padding: 8px 12px;
     background: var(--td-bg-color-secondarycontainer);
     border-bottom: 1px solid var(--td-component-stroke);
-    font-size: 12px;
+    font-size: var(--app-text-sm);
     font-weight: 600;
     color: var(--td-text-color-primary);
   }
@@ -2197,7 +2222,7 @@ const handleDetailsScroll = () => {
     padding: 12px;
     background: var(--td-bg-color-secondarycontainer);
     overflow: auto;
-    font-size: 13px;
+    font-size: var(--app-text-md);
     line-height: 1.5;
 
     code {
@@ -2227,14 +2252,10 @@ const handleDetailsScroll = () => {
 .doc-drawer-header-icon {
   flex-shrink: 0;
   width: 32px;
-  height: 32px;
-  border-radius: 9px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(7, 192, 95, 0.1);
-  color: var(--td-brand-color);
-  font-size: 16px;
 }
 
 .doc-drawer-header-text {
@@ -2243,7 +2264,7 @@ const handleDetailsScroll = () => {
 }
 
 .doc-drawer-header-title {
-  font-size: 15px;
+  font-size: var(--app-text-lg);
   font-weight: 600;
   line-height: 1.4;
   color: var(--td-text-color-primary);
@@ -2276,7 +2297,7 @@ const handleDetailsScroll = () => {
 }
 
 .doc-drawer-body .setting-drawer__section-title {
-  font-size: 13px;
+  font-size: var(--app-text-md);
   font-weight: 600;
   color: var(--td-text-color-primary);
   margin: 0 0 4px;
@@ -2310,7 +2331,7 @@ const handleDetailsScroll = () => {
 
 .doc-detail-label {
   flex: 0 0 72px;
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   color: var(--td-text-color-secondary);
 }
 
@@ -2321,7 +2342,7 @@ const handleDetailsScroll = () => {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--app-text-md);
   color: var(--td-text-color-primary);
   word-break: break-word;
 }
@@ -2339,7 +2360,7 @@ const handleDetailsScroll = () => {
 
 .metadata-count {
   color: var(--td-text-color-placeholder);
-  font-size: 11px;
+  font-size: var(--app-text-xs);
   font-weight: 400;
 }
 
@@ -2361,7 +2382,7 @@ const handleDetailsScroll = () => {
 .summary-refreshing-indicator {
   gap: 5px;
   color: var(--td-text-color-placeholder);
-  font-size: 11px;
+  font-size: var(--app-text-xs);
   white-space: nowrap;
 }
 
@@ -2389,7 +2410,7 @@ const handleDetailsScroll = () => {
 
 .metadata-item-key {
   color: var(--td-text-color-placeholder);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
 
   &::after {
     content: ':';
@@ -2398,7 +2419,7 @@ const handleDetailsScroll = () => {
 
 .metadata-item-value {
   color: var(--td-text-color-primary);
-  font-size: 13px;
+  font-size: var(--app-text-md);
 }
 
 .metadata-empty-action,
@@ -2411,12 +2432,12 @@ const handleDetailsScroll = () => {
   min-height: 28px;
   padding: 0 4px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--app-radius-xs);
   color: var(--td-text-color-secondary);
   background: transparent;
   cursor: pointer;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--app-text-sm);
 
   &:hover {
     color: var(--td-brand-color);
@@ -2456,7 +2477,7 @@ const handleDetailsScroll = () => {
   border-radius: 3px;
   color: var(--td-text-color-placeholder);
   background: var(--td-bg-color-component-disabled);
-  font-size: 13px;
+  font-size: var(--app-text-md);
   line-height: 30px;
 }
 
@@ -2516,8 +2537,8 @@ const handleDetailsScroll = () => {
   padding: 0;
   flex-shrink: 0;
   color: var(--td-text-color-secondary);
-  border-radius: 4px;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  border-radius: var(--app-radius-xs);
+  transition: background-color var(--app-motion-fast) ease, color var(--app-motion-fast) ease;
 
   &:hover {
     background: var(--td-bg-color-container-hover);
@@ -2566,17 +2587,34 @@ const handleDetailsScroll = () => {
   position: relative;
   background: var(--td-bg-color-container);
   border: 1px solid var(--td-component-border);
-  border-radius: 6px;
+  border-radius: var(--app-radius-sm);
 
   &.summary_clickable {
     cursor: pointer;
   }
 }
 
+.summary-title-actions,
+.summary_editor_actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.summary_editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.summary_editor_actions {
+  justify-content: flex-end;
+}
+
 .summary_content {
   padding: 12px;
   color: var(--td-text-color-primary);
-  font-size: 13px;
+  font-size: var(--app-text-md);
   line-height: 1.5;
   word-break: break-word;
   white-space: pre-wrap;
@@ -2617,14 +2655,14 @@ const handleDetailsScroll = () => {
   min-height: 42px;
   background: var(--td-bg-color-container);
   border: 1px dashed var(--td-component-border);
-  border-radius: 6px;
+  border-radius: var(--app-radius-sm);
   color: var(--td-text-color-placeholder);
-  font-size: 13px;
+  font-size: var(--app-text-md);
 }
 
 // URL链接区域
 .url_link_box {
-  border-radius: 4px;
+  border-radius: var(--app-radius-xs);
   background: var(--td-bg-color-container-hover);
   padding: 8px 12px;
 
@@ -2637,7 +2675,7 @@ const handleDetailsScroll = () => {
 
     .url_text {
       flex: 1;
-      font-size: 13px;
+      font-size: var(--app-text-md);
       word-break: break-all;
     }
 
@@ -2659,7 +2697,7 @@ const handleDetailsScroll = () => {
   max-width: 140px;
   height: 20px;
   line-height: 20px;
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   border-color: var(--td-component-stroke);
   color: var(--td-text-color-secondary);
   padding: 0 8px;
@@ -2672,16 +2710,16 @@ const handleDetailsScroll = () => {
     text-overflow: ellipsis;
     white-space: nowrap;
     vertical-align: middle;
-    font-size: 11px;
+    font-size: var(--app-text-xs);
   }
 }
 
 .chunk-count {
   color: var(--td-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   background: var(--td-bg-color-container-hover);
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--app-radius-xs);
   flex-shrink: 0;
 }
 
@@ -2699,7 +2737,7 @@ const handleDetailsScroll = () => {
 .no_content {
   margin-top: 12px;
   color: var(--td-text-color-disabled);
-  font-size: 13px;
+  font-size: var(--app-text-md);
   padding: 16px;
   text-align: center;
 }
@@ -2712,7 +2750,7 @@ const handleDetailsScroll = () => {
 }
 
 .chunk-item {
-  border-radius: 6px;
+  border-radius: var(--app-radius-sm);
   padding: 12px 14px;
   background: var(--td-bg-color-container);
   border: 1px solid var(--td-component-border);
@@ -2743,7 +2781,7 @@ const handleDetailsScroll = () => {
 
   .chunk-index {
     color: var(--td-text-color-secondary);
-    font-size: 12px;
+    font-size: var(--app-text-sm);
     font-weight: 600;
   }
 
@@ -2756,7 +2794,7 @@ const handleDetailsScroll = () => {
 
   .chunk-meta {
     color: var(--td-text-color-placeholder);
-    font-size: 11px;
+    font-size: var(--app-text-xs);
   }
 }
 
@@ -2780,7 +2818,7 @@ const handleDetailsScroll = () => {
   gap: 6px;
   margin-bottom: 8px;
   color: var(--td-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   font-weight: 500;
 }
 
@@ -2788,7 +2826,7 @@ const handleDetailsScroll = () => {
   width: min(560px, calc(100vw - 32px));
   max-height: min(620px, calc(100vh - 96px));
   overflow: hidden;
-  border-radius: 6px;
+  border-radius: var(--app-radius-sm);
   background: var(--td-bg-color-container);
 }
 
@@ -2806,14 +2844,14 @@ const handleDetailsScroll = () => {
   align-items: center;
   gap: 6px;
   color: var(--td-text-color-primary);
-  font-size: 13px;
+  font-size: var(--app-text-md);
   font-weight: 600;
 }
 
 .chunk-history-current {
   margin-top: 2px;
   color: var(--td-text-color-placeholder);
-  font-size: 11px;
+  font-size: var(--app-text-xs);
 }
 
 .chunk-history-popup-state {
@@ -2823,7 +2861,7 @@ const handleDetailsScroll = () => {
   gap: 8px;
   min-height: 100px;
   color: var(--td-text-color-placeholder);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
 }
 
 .chunk-history-popup-list {
@@ -2865,13 +2903,13 @@ const handleDetailsScroll = () => {
 .chunk-history-version {
   min-width: 32px;
   color: var(--td-text-color-primary);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   font-weight: 600;
 }
 
 .chunk-history-time {
   color: var(--td-text-color-placeholder);
-  font-size: 11px;
+  font-size: var(--app-text-xs);
 }
 
 .chunk-history-status-change {
@@ -2880,7 +2918,7 @@ const handleDetailsScroll = () => {
   gap: 4px;
   margin-left: auto;
   color: var(--td-text-color-secondary);
-  font-size: 11px;
+  font-size: var(--app-text-xs);
 }
 
 .chunk-history-row-chevron {
@@ -2903,7 +2941,7 @@ const handleDetailsScroll = () => {
   gap: 10px;
   min-height: 30px;
   color: var(--td-text-color-placeholder);
-  font-size: 11px;
+  font-size: var(--app-text-xs);
 }
 
 .chunk-history-diff-legend {
@@ -2913,7 +2951,7 @@ const handleDetailsScroll = () => {
   margin: 0;
   flex-shrink: 0;
   color: var(--td-text-color-placeholder);
-  font-size: 10px;
+  font-size: var(--app-text-2xs);
 }
 
 .chunk-history-diff-legend-item {
@@ -2938,11 +2976,11 @@ const handleDetailsScroll = () => {
 
 .chunk-history-no-diff {
   padding: 12px;
-  border-radius: 4px;
+  border-radius: var(--app-radius-xs);
   color: var(--td-text-color-placeholder);
   background: var(--td-bg-color-container);
   text-align: center;
-  font-size: 12px;
+  font-size: var(--app-text-sm);
 }
 
 .chunk-history-diff-body {
@@ -2951,10 +2989,10 @@ const handleDetailsScroll = () => {
   padding: 8px 0;
   overflow: auto;
   border: 1px solid var(--td-component-border);
-  border-radius: 4px;
+  border-radius: var(--app-radius-xs);
   background: var(--td-bg-color-container);
   font-family: var(--app-font-family-mono);
-  font-size: 11px;
+  font-size: var(--app-text-xs);
   line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
@@ -2989,7 +3027,7 @@ const handleDetailsScroll = () => {
   width: min(520px, calc(100vw - 32px));
   max-height: min(560px, calc(100vh - 96px));
   overflow: hidden;
-  border-radius: 6px;
+  border-radius: var(--app-radius-sm);
   background: var(--td-bg-color-container);
 }
 
@@ -3011,19 +3049,19 @@ const handleDetailsScroll = () => {
 .chunk-popup-title {
   gap: 7px;
   color: var(--td-text-color-primary);
-  font-size: 13px;
+  font-size: var(--app-text-md);
   font-weight: 600;
 }
 
 .chunk-popup-count {
   color: var(--td-text-color-placeholder);
-  font-size: 11px;
+  font-size: var(--app-text-xs);
   font-weight: 400;
 }
 
 .chunk-question-stale-hint {
   color: var(--td-warning-color);
-  font-size: 11px;
+  font-size: var(--app-text-xs);
   font-weight: 400;
 }
 
@@ -3036,7 +3074,7 @@ const handleDetailsScroll = () => {
   gap: 8px;
   min-height: 120px;
   color: var(--td-text-color-placeholder);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
 }
 
 .chunk-context-popup-body {
@@ -3044,7 +3082,7 @@ const handleDetailsScroll = () => {
   padding: 14px 16px;
   overflow: auto;
   color: var(--td-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-md);
 }
 
 .chunk-questions-popup-body {
@@ -3071,9 +3109,9 @@ const handleDetailsScroll = () => {
   min-height: 34px;
   padding: 5px 6px;
   border-bottom: 1px solid var(--td-component-stroke);
-  border-radius: 4px;
+  border-radius: var(--app-radius-xs);
   background: transparent;
-  font-size: 13px;
+  font-size: var(--app-text-md);
   color: var(--td-text-color-primary);
   line-height: 20px;
 
@@ -3116,7 +3154,7 @@ const handleDetailsScroll = () => {
   align-items: center;
   gap: 2px;
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transition: opacity var(--app-motion-fast) ease;
 
   &:focus-within {
     opacity: 1;
@@ -3138,7 +3176,7 @@ const handleDetailsScroll = () => {
   gap: 8px;
   padding: 20px 8px 12px;
   color: var(--td-text-color-placeholder);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
 }
 
 .question-composer {
@@ -3156,7 +3194,7 @@ const handleDetailsScroll = () => {
   margin-bottom: 16px;
   padding: 12px 16px;
   background: var(--td-bg-color-container-hover);
-  border-radius: 6px;
+  border-radius: var(--app-radius-sm);
   border: 1px solid var(--td-component-border);
 
   .audio-player {
@@ -3169,7 +3207,7 @@ const handleDetailsScroll = () => {
     align-items: center;
     gap: 8px;
     color: var(--td-text-color-placeholder);
-    font-size: 13px;
+    font-size: var(--app-text-md);
     padding: 4px 0;
   }
 }
@@ -3229,7 +3267,7 @@ const handleDetailsScroll = () => {
   border-radius: 1px;
   background: var(--td-component-border);
   opacity: 0.55;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  transition: opacity var(--app-motion-fast) ease, background var(--app-motion-fast) ease;
 }
 
 .doc-drawer-resize-handle:hover .doc-drawer-resize-line {
@@ -3263,7 +3301,7 @@ const handleDetailsScroll = () => {
   border-radius: 1px;
   background: var(--td-component-border);
   opacity: 0.55;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  transition: opacity var(--app-motion-fast) ease, background var(--app-motion-fast) ease;
 }
 
 .trace-drawer-resize-handle:hover .trace-drawer-resize-line {

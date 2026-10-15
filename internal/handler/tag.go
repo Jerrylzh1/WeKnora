@@ -2,16 +2,17 @@ package handler
 
 import (
 	"context"
+	stderrors "errors"
+	"io"
 	"net/http"
 	"strconv"
-
-	"github.com/gin-gonic/gin"
 
 	"github.com/Tencent/WeKnora/internal/errors"
 	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/types"
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
 	secutils "github.com/Tencent/WeKnora/internal/utils"
+	"github.com/gin-gonic/gin"
 )
 
 // TagHandler handles knowledge base tag operations.
@@ -78,7 +79,7 @@ func (h *TagHandler) getChunksBySeqIDs(ctx context.Context, tenantID uint64, seq
 // @Param        page       query     int     false  "页码"
 // @Param        page_size  query     int     false  "每页数量"
 // @Param        keyword    query     string  false  "关键词搜索"
-// @Success      200        {object}  map[string]interface{}  "标签列表"
+// @Success      200        {object}  handler.DataResponse{data=types.PageResult}  "标签列表"
 // @Failure      400        {object}  errors.AppError         "请求参数错误"
 // @Security     Bearer
 // @Security     ApiKeyAuth
@@ -123,7 +124,7 @@ type createTagRequest struct {
 // @Produce      json
 // @Param        id       path      string  true  "知识库ID"
 // @Param        request  body      object{name=string,color=string,sort_order=int}  true  "标签信息"
-// @Success      200      {object}  map[string]interface{}  "创建的标签"
+// @Success      200      {object}  handler.DataResponse{data=types.KnowledgeTag}  "创建的标签"
 // @Failure      400      {object}  errors.AppError         "请求参数错误"
 // @Security     Bearer
 // @Security     ApiKeyAuth
@@ -170,7 +171,7 @@ type updateTagRequest struct {
 // @Param        id       path      string  true  "知识库ID"
 // @Param        tag_id   path      string  true  "标签ID (UUID或seq_id)"
 // @Param        request  body      object  true  "标签更新信息"
-// @Success      200      {object}  map[string]interface{}  "更新后的标签"
+// @Success      200      {object}  handler.DataResponse{data=types.KnowledgeTag}  "更新后的标签"
 // @Failure      400      {object}  errors.AppError         "请求参数错误"
 // @Security     Bearer
 // @Security     ApiKeyAuth
@@ -217,7 +218,7 @@ func (h *TagHandler) UpdateTag(c *gin.Context) {
 // @Param        force         query     bool                false  "强制删除"
 // @Param        content_only  query     bool                false  "仅删除内容，保留标签"
 // @Param        body          body      DeleteTagRequest    false  "删除选项"
-// @Success      200           {object}  map[string]interface{}  "删除成功"
+// @Success      200           {object}  handler.SuccessResponse  "删除成功"
 // @Failure      400           {object}  errors.AppError         "请求参数错误"
 // @Security     Bearer
 // @Security     ApiKeyAuth
@@ -235,19 +236,42 @@ func (h *TagHandler) DeleteTag(c *gin.Context) {
 	contentOnly := c.Query("content_only") == "true"
 
 	var req DeleteTagRequest
-	_ = c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil && !stderrors.Is(err, io.EOF) {
+		_ = c.Error(errors.NewBadRequestError("删除选项不合法"))
+		return
+	}
 
 	var excludeUUIDs []string
 	if len(req.ExcludeIDs) > 0 {
 		tenantID := types.MustTenantIDFromContext(ctx)
+		wanted := make(map[int64]bool, len(req.ExcludeIDs))
+		for _, id := range req.ExcludeIDs {
+			if id <= 0 {
+				_ = c.Error(errors.NewBadRequestError("排除条目 ID 必须为正整数"))
+				return
+			}
+			wanted[id] = true
+		}
 		chunks, err := h.getChunksBySeqIDs(ctx, tenantID, req.ExcludeIDs)
 		if err != nil {
-			logger.Warnf(ctx, "Failed to resolve exclude_ids: %v", err)
-		} else {
-			excludeUUIDs = make([]string, len(chunks))
-			for i, chunk := range chunks {
-				excludeUUIDs[i] = chunk.ID
+			_ = c.Error(err)
+			return
+		}
+		for _, chunk := range chunks {
+			if chunk == nil || !wanted[chunk.SeqID] {
+				continue
 			}
+			if chunk.TenantID != tenantID || chunk.KnowledgeBaseID != c.Param("id") ||
+				chunk.ChunkType != types.ChunkTypeFAQ {
+				_ = c.Error(errors.NewForbiddenError("排除条目不属于当前知识库"))
+				return
+			}
+			excludeUUIDs = append(excludeUUIDs, chunk.ID)
+			delete(wanted, chunk.SeqID)
+		}
+		if len(wanted) != 0 {
+			_ = c.Error(errors.NewNotFoundError("排除条目不存在"))
+			return
 		}
 	}
 

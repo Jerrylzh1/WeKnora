@@ -506,13 +506,13 @@ func TestJsonToMarkdown_RealisticLargeNestedConfig(t *testing.T) {
 	rules := make(map[string]interface{})
 	for i := 0; i < 30; i++ {
 		rules[fmt.Sprintf("rule_%02d", i)] = map[string]interface{}{
-			"pattern": strings.Repeat("pattern", 10),
-			"action":  "allow",
+			"pattern":  strings.Repeat("pattern", 10),
+			"action":   "allow",
 			"priority": i,
 		}
 	}
 	config := map[string]interface{}{
-		"version": "3.0",
+		"version":  "3.0",
 		"metadata": map[string]interface{}{"author": "admin", "updated": "2026-03-24"},
 		"firewall": map[string]interface{}{
 			"enabled": true,
@@ -578,6 +578,35 @@ func TestSimpleFormatReader_JSON_Invalid(t *testing.T) {
 		check("error mentions 'json'",
 			err != nil && strings.Contains(strings.ToLower(err.Error()), "json")),
 	})
+}
+
+func TestValidateJSONContent(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    string
+		wantErr string
+	}{
+		{name: "object", data: `{"a":1}`},
+		{name: "array", data: `[1,2]`},
+		{name: "bom object", data: "\ufeff{\"a\":1}"},
+		{name: "empty", data: "", wantErr: "empty JSON content"},
+		{name: "jsonc", data: "{\n// x\n}", wantErr: "invalid JSON content"},
+		{name: "truncated", data: `{"a":`, wantErr: "invalid JSON content"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateJSONContent([]byte(tt.data))
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatalf("ValidateJSONContent() err = %v", err)
+				}
+				return
+			}
+			if err == nil || err.Error() != tt.wantErr {
+				t.Fatalf("ValidateJSONContent() err = %v, want %q", err, tt.wantErr)
+			}
+		})
+	}
 }
 
 func TestIsSimpleFormat_JSON(t *testing.T) {
